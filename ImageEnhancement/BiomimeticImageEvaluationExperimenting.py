@@ -10,8 +10,10 @@ from skimage import io, color
 numb = 18
 dark_image = cv2.imread(f"/kaggle/input/dark-face-dataset/image/{numb}.png")
 
+
 #Load Light Image
 natural_image = cv2.imread("/kaggle/input/natural-images/natural_images/cat/cat_0301.jpg")
+
 
 
 ### Saliency Experiment

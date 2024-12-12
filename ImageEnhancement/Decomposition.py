@@ -7,9 +7,9 @@ import skimage.filters as filters
 from skimage import io, color
 
 
-def decomposition(image_url):
+def decomposition(image):
     #Load Image
-    image = cv2.imread(r"{url}".format(url = image_url))
+    #image = cv2.imread(r"{url}".format(url = image_url))
 
     #Grayscale Image
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)

@@ -1,0 +1,12 @@
+{
+    "Saturation": 0.05079967757819648,
+    "CLAHE_clipLimit_Value": 2.525144052221287,
+    "CLAHE_clipLimit_BGR": 3.6481905337323903,
+    "Retinex_gain": 1.1856138179236042,
+    "Retinex_sigma1": 12.602866099185661,
+    "Retinex_sigma2": 78.29144514892346,
+    "Retinex_sigma3": 169.00897570787157,
+    "Blend_ratio": 0.07407034069082408,
+    "gamma": 1.3266392904177562,
+    "brightness_boost": 22.896780890614952
+}
