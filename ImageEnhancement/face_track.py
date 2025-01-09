@@ -1,6 +1,5 @@
 import cv2
 from ultralytics import YOLO
-import csv
 
 # Load the YOLO model
 model = YOLO("yolo11n.pt") 
@@ -17,13 +16,13 @@ while cap.isOpened():
         break
 
     # Perform inference on the frame
-    results = model(frame)
+    results = model(frame, classes=[15])
 
     # Draw bounding boxes and labels on the frame
     for result in results:
         for box in result.boxes:
             confidence = box.conf[0]
-            if confidence > 0.58:  # Confidence threshold
+            if confidence > 0.4:  # Confidence threshold
                 x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
                 class_id = int(box.cls[0])  # Class ID
                 label = model.names[class_id]
