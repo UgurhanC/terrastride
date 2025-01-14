@@ -22,7 +22,7 @@ from hailo_rpi_common import (
     dummy_callback,
     detect_hailo_arch,
 )
-
+import multiprocessing
 
 
 # -----------------------------------------------------------------------------------------------
@@ -31,7 +31,7 @@ from hailo_rpi_common import (
 
 # This class inherits from the hailo_rpi_common.GStreamerApp class
 class GStreamerDetectionApp(GStreamerApp):
-    def __init__(self, app_callback, user_data):
+    def __init__(self, app_callback, user_data, bbox_queue):
         parser = get_default_parser()
         parser.add_argument(
             "--labels-json",
@@ -41,6 +41,7 @@ class GStreamerDetectionApp(GStreamerApp):
         args = parser.parse_args()
         # Call the parent class constructor
         super().__init__(args, user_data)
+        self.bbox_queue = bbox_queue
         # Additional initialization code can be added here
         # Set Hailo parameters these parameters should be set based on the model used
         self.batch_size = 2
@@ -110,7 +111,8 @@ class GStreamerDetectionApp(GStreamerApp):
 
 if __name__ == "__main__":
     # Create an instance of the user app callback class
+    bbox_queue = multiprocessing.Queue()
     user_data = app_callback_class()
     app_callback = dummy_callback
-    app = GStreamerDetectionApp(app_callback, user_data)
+    app = GStreamerDetectionApp(app_callback, user_data, bbox_queue)
     app.run()
