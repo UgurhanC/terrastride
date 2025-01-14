@@ -10,7 +10,7 @@ from hailo_rpi_common import (
     get_numpy_from_buffer,
     app_callback_class,
 )
-from pose_estimation_pipeline import GStreamerPoseEstimationApp
+from detection_pipeline import GStreamerDetectionApp
 
 # -----------------------------------------------------------------------------------------------
 # User-defined class to be used in the callback function
@@ -19,6 +19,10 @@ from pose_estimation_pipeline import GStreamerPoseEstimationApp
 class user_app_callback_class(app_callback_class):
     def __init__(self):
         super().__init__()
+        self.new_variable = 42  # New variable example
+
+    def new_function(self):  # New function example
+        return "The meaning of life is: "
 
 # -----------------------------------------------------------------------------------------------
 # User-defined callback function
@@ -45,34 +49,47 @@ def app_callback(pad, info, user_data):
         # Get video frame
         frame = get_numpy_from_buffer(buffer, format, width, height)
 
+        #Apply Image Enhancement with Best Params
+        params = {
+            "Saturation": 0.05079967757819648,
+            "CLAHE_clipLimit_Value": 2.525144052221287,
+            "CLAHE_clipLimit_BGR": 3.6481905337323903,
+            "Retinex_gain": 1.1856138179236042,
+            "Retinex_sigma1": 12.602866099185661,
+            "Retinex_sigma2": 78.29144514892346,
+            "Retinex_sigma3": 169.00897570787157,
+            "Blend_ratio": 0.07407034069082408,
+            "gamma": 1.3266392904177562,
+            "brightness_boost": 22.896780890614952
+        }
+        enhanced_frame = apply_image_enhancement(frame, params)
+
+        # Convert the enhanced frame back to BGR for display
+        enhanced_frame = cv2.cvtColor(enhanced_frame, cv2.COLORRGB2BGR)
+        
     # Get the detections from the buffer
     roi = hailo.get_roi_from_buffer(buffer)
     detections = roi.get_objects_typed(hailo.HAILO_DETECTION)
 
-    # Get the keypoints
-    keypoints = get_keypoints()
-
     # Parse the detections
+    detection_count = 0
+    det = {}
     for detection in detections:
         label = detection.get_label()
         bbox = detection.get_bbox()
         confidence = detection.get_confidence()
+        det[label] = [bbox, confidence]
         if label == "person":
-            string_to_print += (f"Detection: {label} {confidence:.2f}\n")
-            # Pose estimation landmarks from detection (if available)
-            landmarks = detection.get_objects_typed(hailo.HAILO_LANDMARKS)
-            if len(landmarks) != 0:
-                points = landmarks[0].get_points()
-                for eye in ['left_eye', 'right_eye']:
-                    keypoint_index = keypoints[eye]
-                    point = points[keypoint_index]
-                    x = int((point.x() * bbox.width() + bbox.xmin()) * width)
-                    y = int((point.y() * bbox.height() + bbox.ymin()) * height)
-                    string_to_print += f"{eye}: x: {x:.2f} y: {y:.2f}\n"
-                    if user_data.use_frame:
-                        cv2.circle(frame, (x, y), 5, (0, 255, 0), -1)
-
+            string_to_print += f"Detection: {label} {confidence:.2f}\n"
+            detection_count += 1
+    print(det)
     if user_data.use_frame:
+        # Note: using imshow will not work here, as the callback function is not running in the main thread
+        # Let's print the detection count to the frame
+        cv2.putText(frame, f"Detections: {detection_count}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        # Example of how to use the new_variable and new_function from the user_data
+        # Let's print the new_variable and the result of the new_function to the frame
+        cv2.putText(frame, f"{user_data.new_function()} {user_data.new_variable}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         # Convert the frame to BGR
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         user_data.set_frame(frame)
@@ -80,33 +97,8 @@ def app_callback(pad, info, user_data):
     print(string_to_print)
     return Gst.PadProbeReturn.OK
 
-# This function can be used to get the COCO keypoints coorespondence map
-def get_keypoints():
-    """Get the COCO keypoints and their left/right flip coorespondence map."""
-    keypoints = {
-        'nose': 0,
-        'left_eye': 1,
-        'right_eye': 2,
-        'left_ear': 3,
-        'right_ear': 4,
-        'left_shoulder': 5,
-        'right_shoulder': 6,
-        'left_elbow': 7,
-        'right_elbow': 8,
-        'left_wrist': 9,
-        'right_wrist': 10,
-        'left_hip': 11,
-        'right_hip': 12,
-        'left_knee': 13,
-        'right_knee': 14,
-        'left_ankle': 15,
-        'right_ankle': 16,
-    }
-
-    return keypoints
-
 if __name__ == "__main__":
     # Create an instance of the user app callback class
     user_data = user_app_callback_class()
-    app = GStreamerPoseEstimationApp(app_callback, user_data)
+    app = GStreamerDetectionApp(app_callback, user_data)
     app.run()

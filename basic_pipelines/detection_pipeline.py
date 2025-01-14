@@ -14,6 +14,7 @@ from hailo_rpi_common import (
     QUEUE,
     SOURCE_PIPELINE,
     INFERENCE_PIPELINE,
+    INFERENCE_PIPELINE_WRAPPER,
     USER_CALLBACK_PIPELINE,
     DISPLAY_PIPELINE,
     GStreamerApp,
@@ -21,25 +22,35 @@ from hailo_rpi_common import (
     dummy_callback,
     detect_hailo_arch,
 )
+import multiprocessing
 
-#-----------------------------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------------------------
 # User Gstreamer Application
 # -----------------------------------------------------------------------------------------------
 
 # This class inherits from the hailo_rpi_common.GStreamerApp class
-
-class GStreamerInstanceSegmentationApp(GStreamerApp):
-    def __init__(self, app_callback, user_data):
+class GStreamerDetectionApp(GStreamerApp):
+    def __init__(self, app_callback, user_data, bbox_queue):
         parser = get_default_parser()
+        parser.add_argument(
+            "--labels-json",
+            default=None,
+            help="Path to costume labels JSON file",
+        )
         args = parser.parse_args()
         # Call the parent class constructor
         super().__init__(args, user_data)
+        self.bbox_queue = bbox_queue
         # Additional initialization code can be added here
         # Set Hailo parameters these parameters should be set based on the model used
         self.batch_size = 2
         self.network_width = 640
         self.network_height = 640
         self.network_format = "RGB"
+        nms_score_threshold = 0.3
+        nms_iou_threshold = 0.45
+
 
         # Determine the architecture if not specified
         if args.arch is None:
@@ -51,44 +62,47 @@ class GStreamerInstanceSegmentationApp(GStreamerApp):
         else:
             self.arch = args.arch
 
-        # Set the HEF file path based on the architecture
-        if args.hef_path:
-            self.hef_path = args.hef_path
-        elif self.arch == "hailo8":
-            self.hef_path = os.path.join(self.current_path, '../resources/yolov5m_seg.hef')
-        else:  # hailo8l
-            self.hef_path = os.path.join(self.current_path, '../resources/yolov5n_seg_h8l_mz.hef')
 
-        # self.default_post_process_so = os.path.join(self.postprocess_dir, 'libyolov5seg_post.so')
-        if 'yolov5m_seg' in self.hef_path:
-            self.config_file = os.path.join(self.current_path, '../resources/yolov5m_seg.json')
-        elif 'yolov5n_seg' in self.hef_path:
-            self.config_file = os.path.join(self.current_path, '../resources/yolov5n_seg.json')
-        else:
-            raise ValueError("HEF version not supported, you will need to provide a config file")
-        self.default_post_process_so = os.path.join(self.current_path, '../resources/libyolov5seg_postprocess.so')
-        self.post_function_name = "yolov5seg"
+        if args.hef_path is not None:
+            self.hef_path = args.hef_path
+        # Set the HEF file path based on the arch
+        elif self.arch == "hailo8":
+            self.hef_path = os.path.join(self.current_path, '../resources/yolov8m.hef')
+        else:  # hailo8l
+            self.hef_path = os.path.join(self.current_path, '../resources/yolov8s_h8l.hef')
+
+        # Set the post-processing shared object file
+        self.post_process_so = os.path.join(self.current_path, '../resources/libyolo_hailortpp_postprocess.so')
+
+        # User-defined label JSON file
+        self.labels_json = args.labels_json
+
         self.app_callback = app_callback
 
+        self.thresholds_str = (
+            f"nms-score-threshold={nms_score_threshold} "
+            f"nms-iou-threshold={nms_iou_threshold} "
+            f"output-format-type=HAILO_FORMAT_TYPE_FLOAT32"
+        )
+
         # Set the process title
-        setproctitle.setproctitle("Hailo Instance Segmentation App")
+        setproctitle.setproctitle("Hailo Detection App")
 
         self.create_pipeline()
 
     def get_pipeline_string(self):
-        source_pipeline = SOURCE_PIPELINE(video_source=self.video_source)
-        infer_pipeline = INFERENCE_PIPELINE(
+        source_pipeline = SOURCE_PIPELINE(self.video_source)
+        detection_pipeline = INFERENCE_PIPELINE(
             hef_path=self.hef_path,
-            post_process_so=self.default_post_process_so,
-            post_function_name=self.post_function_name,
+            post_process_so=self.post_process_so,
             batch_size=self.batch_size,
-            config_json=self.config_file,
-        )
+            config_json=self.labels_json,
+            additional_params=self.thresholds_str)
         user_callback_pipeline = USER_CALLBACK_PIPELINE()
         display_pipeline = DISPLAY_PIPELINE(video_sink=self.video_sink, sync=self.sync, show_fps=self.show_fps)
         pipeline_string = (
             f'{source_pipeline} '
-            f'{infer_pipeline} ! '
+            f'{detection_pipeline} ! '
             f'{user_callback_pipeline} ! '
             f'{display_pipeline}'
         )
@@ -97,6 +111,8 @@ class GStreamerInstanceSegmentationApp(GStreamerApp):
 
 if __name__ == "__main__":
     # Create an instance of the user app callback class
+    bbox_queue = multiprocessing.Queue()
     user_data = app_callback_class()
-    app = GStreamerInstanceSegmentationApp(dummy_callback, user_data)
+    app_callback = dummy_callback
+    app = GStreamerDetectionApp(app_callback, user_data, bbox_queue)
     app.run()

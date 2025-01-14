@@ -10,7 +10,7 @@ from hailo_rpi_common import (
     get_numpy_from_buffer,
     app_callback_class,
 )
-from instance_segmentation_pipeline import GStreamerInstanceSegmentationApp
+from detection_pipeline import GStreamerDetectionApp
 
 # -----------------------------------------------------------------------------------------------
 # User-defined class to be used in the callback function
@@ -19,6 +19,10 @@ from instance_segmentation_pipeline import GStreamerInstanceSegmentationApp
 class user_app_callback_class(app_callback_class):
     def __init__(self):
         super().__init__()
+        self.new_variable = 42  # New variable example
+
+    def new_function(self):  # New function example
+        return "The meaning of life is: "
 
 # -----------------------------------------------------------------------------------------------
 # User-defined callback function
@@ -50,48 +54,32 @@ def app_callback(pad, info, user_data):
     detections = roi.get_objects_typed(hailo.HAILO_DETECTION)
 
     # Parse the detections
+    detection_count = 0
+    det = {}
     for detection in detections:
         label = detection.get_label()
         bbox = detection.get_bbox()
         confidence = detection.get_confidence()
+        det[label] = [bbox, confidence]
         if label == "person":
-            string_to_print += (f"Detection: {label} {confidence:.2f}\n")
-            if user_data.use_frame:
-                # Instance segmentation mask from detection (if available)
-                masks = detection.get_objects_typed(hailo.HAILO_CONF_CLASS_MASK)
-                if len(masks) != 0:
-                    mask = masks[0]
-                    # Note that the mask is a 1D array, you need to reshape it to get the original shape
-                    mask_height = mask.get_height()
-                    mask_width = mask.get_width()
-                    data = np.array(mask.get_data())
-                    data = data.reshape((mask_height, mask_width))
-                    # data should be enlarged x4
-                    mask_width = mask_width * 4
-                    mask_height = mask_height * 4
-                    data = cv2.resize(data, (mask_width, mask_height), interpolation=cv2.INTER_NEAREST)
-                    string_to_print += f"Mask shape: {data.shape}, "
-                    string_to_print += f"Base coordinates ({int(bbox.xmin() * width)},{int(bbox.ymin() * height)})\n"
-
-                    # This code is on remark due to performance issues
-                    # # Add mask overlay to the frame
-                    # mask_overlay = np.zeros_like(frame)
-                    # x_min, y_min = int(bbox.xmin() * width), int(bbox.ymin() * height)
-                    # x_max, y_max = x_min + mask_width, y_min + mask_height
-                    # mask_overlay[y_min:y_max, x_min:x_max, 2] = (data > 0.5) * 255  # Red channel
-                    # frame = cv2.addWeighted(frame, 1, mask_overlay, 0.5, 0)
-
-    print(string_to_print)
-
+            string_to_print += f"Detection: {label} {confidence:.2f}\n"
+            detection_count += 1
     if user_data.use_frame:
+        # Note: using imshow will not work here, as the callback function is not running in the main thread
+        # Let's print the detection count to the frame
+        cv2.putText(frame, f"Detections: {detection_count}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        # Example of how to use the new_variable and new_function from the user_data
+        # Let's print the new_variable and the result of the new_function to the frame
+        cv2.putText(frame, f"{user_data.new_function()} {user_data.new_variable}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         # Convert the frame to BGR
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         user_data.set_frame(frame)
 
+    print(string_to_print)
     return Gst.PadProbeReturn.OK
 
 if __name__ == "__main__":
     # Create an instance of the user app callback class
     user_data = user_app_callback_class()
-    app = GStreamerInstanceSegmentationApp(app_callback, user_data)
+    app = GStreamerDetectionApp(app_callback, user_data)
     app.run()

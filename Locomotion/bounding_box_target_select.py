@@ -1,6 +1,7 @@
 import time
 import random
 import bounding_box_motor_control
+import multiprocessing
 
 safe_distance = 1.5  # Distance to maintain from objects (meters)
 target_size = 600  # Desired bounding box height in pixels
@@ -40,50 +41,35 @@ def select_target_box(detections, frame_center):
     """
     return max(detections, key=lambda det: calculate_combined_score(det['box'], det['confidence'], frame_center))
 
-def cautious_approach(detections, frame_center):
-    """
-    Align the bounding box to the frame center and adjust its size.
-    """
-    if not detections:
-        random_exploration()
-        return
 
-    # Select the best bounding box
-    target_detection = select_target_box(detections, frame_center)
-    target_box = target_detection['box']
-    box_center_x = (target_box[0] + target_box[2]) / 2  # Center of the target bounding box
-    error_x = box_center_x - frame_center
-    bounding_box_height = target_box[3] - target_box[1]
-
-    if abs(error_x) > 10:  # Centering threshold
-        turn_speed = min(max(abs(error_x) * 0.1, 10), 50)
-        if error_x > 0:
-            print("Turn right")
-            movement_mapping_test.move_robot(-turn_speed, turn_speed)  # Turn right
-        else:
-            print("Turn left")
-            movement_mapping_test.move_robot(turn_speed, -turn_speed)  # Turn left
-    elif abs(bounding_box_height - target_size) > size_tolerance:
-        # Adjust distance to match target size
-        if bounding_box_height < target_size:
-            print("Object too far, move forward")
-            movement_mapping_test.move_robot(40, 40)  # Move forward
-        else:
-            print("Object too close, move backward")
-            movement_mapping_test.move_robot(-30, -30)  # Move backward
-    else:
-        movement_mapping_test.stop_robot()  # Stop if within target size and centered
-
-if __name__ == "__main__":
-    bounding_boxes = []  # List of detected bounding boxes with confidence scores
-    frame_center = 500  # Center of the frame (adjust dynamically if needed)
+def cautious_approach(bbox_queue):
+    """Align and adjust movement based on bounding boxes."""
+    frame_center = 500
 
     while True:
-        # Replace with actual detection logic
-        # bounding_boxes = get_detections()
-        # Each detection should be a dictionary with keys 'box' and 'confidence', e.g.,
-        # {'box': [x1, y1, x2, y2], 'confidence': 0.95}
-        if bounding_boxes:
-            cautious_approach(bounding_boxes, frame_center)
-        else:
+        detections = []
+        while not bbox_queue.empty():
+            detections.append(bbox_queue.get())
+
+        if not detections:
             random_exploration()
+            continue
+
+        target = select_target_box(detections, frame_center)
+        box = target['box']
+        center_x = (box[0] + box[2]) / 2
+        error_x = center_x - frame_center
+        box_height = box[3] - box[1]
+
+        if abs(error_x) > 10:
+            turn_speed = min(max(abs(error_x) * 0.1, 10), 50)
+            print("Turning", "right" if error_x > 0 else "left", f"speed={turn_speed}")
+        elif abs(box_height - target_size) > size_tolerance:
+            print("Adjusting distance", "closer" if box_height < target_size else "further")
+        else:
+            print("Object centered and at desired size. Stopping.")
+        time.sleep(0.1)
+
+if __name__ == "__main__":
+    bbox_queue = multiprocessing.Queue()
+    cautious_approach(bbox_queue)
