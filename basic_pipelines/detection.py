@@ -64,7 +64,6 @@ def app_callback(pad, info, user_data):
         if label == "person":
             string_to_print += f"Detection: {label} {confidence:.2f}\n"
             detection_count += 1
-    print(det)
     if user_data.use_frame:
         # Note: using imshow will not work here, as the callback function is not running in the main thread
         # Let's print the detection count to the frame
