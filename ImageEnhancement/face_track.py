@@ -4,7 +4,7 @@ import time
 from ultralytics import YOLO  # Import the YOLO library
 
 # Initialize the YOLO model
-model = YOLO("yolov8n.pt")  # Replace 'yolov8n.pt' with the path to your model if custom
+model = YOLO("yolo11n.pt")  # Replace 'yolov8n.pt' with the path to your model if custom
 
 # Initialize the Picamera2
 picam2 = Picamera2()
@@ -33,29 +33,16 @@ try:
         for result in results:
             # Assuming YOLO results contain bounding boxes and labels
             for box in result.boxes:
-                bbox = box.xyxy[0].cpu().numpy()  # Get bounding box coordinates
-                label = int(box.cls.cpu().numpy())  # Get class label
-                confidence = float(box.conf.cpu().numpy())  # Confidence score
-
-                # Draw the bounding box on the frame
-                cv2.rectangle(
-                    frame,
-                    (int(bbox[0]), int(bbox[1])),  # Top-left corner
-                    (int(bbox[2]), int(bbox[3])),  # Bottom-right corner
-                    (0, 255, 0),  # Green color
-                    2  # Thickness
-                )
-
-                # Put the label and confidence on the frame
-                cv2.putText(
-                    frame,
-                    f"{label} {confidence:.2f}",
-                    (int(bbox[0]), int(bbox[1] - 10)),  # Slightly above the box
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,  # Font size
-                    (0, 255, 0),  # Green color
-                    2  # Thickness
-                )
+                confidence = box.conf[0]
+                if confidence > 0.4:
+                    x1, y1, x2, y2 = map(int,box.xyxy[0].tolist())
+                    class_id = int(box.cls[0])
+                    label = model.names[class_id]
+                    
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    
+                    cv2.putText(frame, f"{label} {confidence:.2f}",
+                                (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
         # Display the frame
         cv2.imshow("Picamera2 Frame with YOLO Inference", frame)
