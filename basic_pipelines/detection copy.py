@@ -11,6 +11,7 @@ from hailo_rpi_common import (
     app_callback_class,
 )
 from detection_pipeline import GStreamerDetectionApp
+from ImageEnhancement.ApplyImageEnhancement import apply_image_enhancement
 
 # -----------------------------------------------------------------------------------------------
 # User-defined class to be used in the callback function
