@@ -22,9 +22,9 @@ def random_exploration():
         else:
             left_speed = -left_speed  # Turn left randomly
 
-    movement_mapping_test.move_robot(left_speed, right_speed)
+    movement_mapping.move_robot(left_speed, right_speed)
     time.sleep(2)  # Move for 2 seconds
-    movement_mapping_test.stop_robot()
+    movement_mapping.stop_robot()
 
 def calculate_combined_score(box, confidence, frame_center):
     """
