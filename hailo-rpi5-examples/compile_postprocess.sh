@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set the project directory name
-PROJECT_DIR="."
+PROJECT_DIR="/home/terrastride/terrastride/hailo-rpi5-examples"
 
 # Get the build mode from the command line (default to release)
 if [ "$1" = "debug" ]; then

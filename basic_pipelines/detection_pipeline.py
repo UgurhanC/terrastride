@@ -9,7 +9,7 @@ import setproctitle
 import cv2
 import time
 import hailo
-from hailo_rpi_common import (
+from basic_pipelines.hailo_rpi_common import (
     get_default_parser,
     QUEUE,
     SOURCE_PIPELINE,
@@ -72,7 +72,7 @@ class GStreamerDetectionApp(GStreamerApp):
             self.hef_path = os.path.join(self.current_path, '../resources/yolov8s_h8l.hef')
 
         # Set the post-processing shared object file
-        self.post_process_so = os.path.join(self.current_path, '../resources/libyolo_hailortpp_postprocess.so')
+        self.post_process_so = os.path.abspath('/home/terrastride/terrastride/hailo-rpi5-examples/resources/libyolo_hailortpp_postprocess.so')
 
         # User-defined label JSON file
         self.labels_json = args.labels_json

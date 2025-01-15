@@ -1,6 +1,6 @@
 import time
 import random
-import bounding_box_motor_control
+import Locomotion.bounding_box_motor_control
 import multiprocessing
 
 safe_distance = 1.5  # Distance to maintain from objects (meters)
@@ -18,13 +18,15 @@ def random_exploration():
 
     if random.random() > 0.5:  # Turn robot randomly
         if random.random() > 0.5:
-            right_speed = -right_speed  # Turn right randomly
+            print("turning right randomly")
+            #right_speed = -right_speed  # Turn right randomly
         else:
-            left_speed = -left_speed  # Turn left randomly
+            print("turning left randomly")
+            #left_speed = -left_speed  # Turn left randomly
 
-    movement_mapping_test.move_robot(left_speed, right_speed)
+    #movement_mapping_test.move_robot(left_speed, right_speed)
     time.sleep(2)  # Move for 2 seconds
-    movement_mapping_test.stop_robot()
+    #movement_mapping_test.stop_robot()
 
 def calculate_combined_score(box, confidence, frame_center):
     """
