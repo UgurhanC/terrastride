@@ -1,6 +1,5 @@
 import time
 import random
-import Locomotion.bounding_box_motor_control
 import multiprocessing
 
 safe_distance = 1.5  # Distance to maintain from objects (meters)
@@ -19,14 +18,14 @@ def random_exploration():
     if random.random() > 0.5:  # Turn robot randomly
         if random.random() > 0.5:
             print("turning right randomly")
-            #right_speed = -right_speed  # Turn right randomly
+            # right_speed = -right_speed  # Turn right randomly
         else:
             print("turning left randomly")
-            #left_speed = -left_speed  # Turn left randomly
+            # left_speed = -left_speed  # Turn left randomly
 
-    #movement_mapping_test.move_robot(left_speed, right_speed)
+    # movement_mapping_test.move_robot(left_speed, right_speed)
     time.sleep(2)  # Move for 2 seconds
-    #movement_mapping_test.stop_robot()
+    # movement_mapping_test.stop_robot()
 
 def calculate_combined_score(box, confidence, frame_center):
     """
@@ -43,20 +42,26 @@ def select_target_box(detections, frame_center):
     """
     return max(detections, key=lambda det: calculate_combined_score(det['box'], det['confidence'], frame_center))
 
-
 def cautious_approach(bbox_queue):
     """Align and adjust movement based on bounding boxes."""
+    print("Cautious approach started")
     frame_center = 500
 
     while True:
         detections = []
-        while not bbox_queue.empty():
-            detections.append(bbox_queue.get())
+        try:
+            # Non-blocking queue check
+            while not bbox_queue.empty():
+                detections.append(bbox_queue.get_nowait())  # Non-blocking get
+        except Exception as e:
+            print(f"Error getting from queue: {e}")
 
         if not detections:
+            print("Queue empty. Performing random exploration...")
             random_exploration()
             continue
 
+        # Process the detections
         target = select_target_box(detections, frame_center)
         box = target['box']
         center_x = (box[0] + box[2]) / 2
@@ -71,6 +76,7 @@ def cautious_approach(bbox_queue):
         else:
             print("Object centered and at desired size. Stopping.")
         time.sleep(0.1)
+
 
 if __name__ == "__main__":
     bbox_queue = multiprocessing.Queue()

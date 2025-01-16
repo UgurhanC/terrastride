@@ -5,12 +5,12 @@ import os
 import numpy as np
 import cv2
 import hailo
-from hailo_rpi_common import (
+from basic_pipelines.hailo_rpi_common import (
     get_caps_from_pad,
     get_numpy_from_buffer,
     app_callback_class,
 )
-from detection_pipeline import GStreamerDetectionApp
+from basic_pipelines.detection_pipeline import GStreamerDetectionApp
 
 # -----------------------------------------------------------------------------------------------
 # User-defined class to be used in the callback function
@@ -64,6 +64,7 @@ def app_callback(pad, info, user_data):
         if label == "person":
             string_to_print += f"Detection: {label} {confidence:.2f}\n"
             detection_count += 1
+            
     if user_data.use_frame:
         # Note: using imshow will not work here, as the callback function is not running in the main thread
         # Let's print the detection count to the frame

@@ -15,7 +15,7 @@ from basic_pipelines.detection_pipeline import GStreamerDetectionApp
 # -----------------------------------------------------------------------------------------------
 # User-defined class to be used in the callback function
 # -----------------------------------------------------------------------------------------------
-# Inheritance from the app_callback_class
+#Inheritance from the app_callback_class
 class user_app_callback_class(app_callback_class):
     def __init__(self):
         super().__init__()
@@ -23,6 +23,8 @@ class user_app_callback_class(app_callback_class):
 
     def new_function(self):  # New function example
         return "The meaning of life is: "
+
+
 
 # -----------------------------------------------------------------------------------------------
 # User-defined callback function
@@ -95,6 +97,7 @@ def app_callback(pad, info, user_data):
 
 if __name__ == "__main__":
     # Create an instance of the user app callback class
+    bbox_queue = multiprocessing.Queue()
     user_data = user_app_callback_class()
-    app = GStreamerDetectionApp(app_callback, user_data)
+    app = GStreamerDetectionApp(app_callback, user_data, bbox_queue)
     app.run()
