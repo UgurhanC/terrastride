@@ -22,11 +22,7 @@ from locomotion.bounding_box_target_select import *
 class user_app_callback_class(app_callback_class):
     def __init__(self):
         super().__init__()
-        self.new_variable = 42 # new variable example
-    
-    def new_function(self): # new function example
-        return "The meaning of life is: "
-
+        
 # Create an instance of the class
 user_data = user_app_callback_class()
 

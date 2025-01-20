@@ -12,9 +12,12 @@ CONFIDENCE_WEIGHT = 0.3
 
 def random_exploration():
     """Randomly move the robot to explore the area."""
+    current_time = time.time()
+
     left_speed = random.randint(20, 40)  # Random speed between 20% and 40%
     right_speed = random.randint(20, 40)  # Random speed between 20% and 40%
 
+    
     if random.random() > 0.5:  # Turn robot randomly
         if random.random() > 0.5:
             print("turning right randomly")
@@ -22,9 +25,8 @@ def random_exploration():
         else:
             print("turning left randomly")
             # left_speed = -left_speed  # Turn left randomly
-
+    
     # movement_mapping_test.move_robot(left_speed, right_speed)
-    time.sleep(2)  # Move for 2 seconds
     # movement_mapping_test.stop_robot()
 
 def calculate_combined_score(bbox, confidence, frame_center):
