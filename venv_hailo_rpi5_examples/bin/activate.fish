@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV /home/terrastride/terrastride/venv_hailo_rpi5_examples
+set -gx VIRTUAL_ENV /home/terrastride/hailo-rpi5-examples/venv_hailo_rpi5_examples
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/"bin $PATH

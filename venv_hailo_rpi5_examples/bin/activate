@@ -38,7 +38,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV=/home/terrastride/terrastride/venv_hailo_rpi5_examples
+VIRTUAL_ENV=/home/terrastride/hailo-rpi5-examples/venv_hailo_rpi5_examples
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"

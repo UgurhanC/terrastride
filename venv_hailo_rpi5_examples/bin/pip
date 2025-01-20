@@ -1,4 +1,4 @@
-#!/home/terrastride/terrastride/venv_hailo_rpi5_examples/bin/python3
+#!/home/terrastride/hailo-rpi5-examples/venv_hailo_rpi5_examples/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
