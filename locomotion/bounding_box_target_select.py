@@ -27,12 +27,12 @@ def random_exploration():
     time.sleep(2)  # Move for 2 seconds
     # movement_mapping_test.stop_robot()
 
-def calculate_combined_score(box, confidence, frame_center):
+def calculate_combined_score(bbox, confidence, frame_center):
     """
     Calculate a score for selecting the best bounding box based on size and confidence.
     """
-    size_score = box[3] - box[1]  # Bounding box height (proxy for proximity)
-    center_score = -abs((box[0] + box[2]) / 2 - frame_center)  # Closer to center is better
+    size_score = bbox.ymax() - bbox.ymin()  # Bounding box height (proxy for proximity)
+    center_score = -abs((bbox.xmin() + bbox.xmax()) / 2 - frame_center)  # Closer to center is better
     combined_score = SIZE_WEIGHT * size_score + CONFIDENCE_WEIGHT * confidence  # Weighted combination
     return combined_score
 
@@ -42,31 +42,18 @@ def select_target_box(detections, frame_center):
     """
     return max(detections, key=lambda det: calculate_combined_score(det['box'], det['confidence'], frame_center))
 
-def cautious_approach(bbox_queue):
+def cautious_approach(detections):
     """Align and adjust movement based on bounding boxes."""
     print("Cautious approach started")
     frame_center = 500
 
     while True:
-        detections = []
-        try:
-            # Non-blocking queue check
-            while not bbox_queue.empty():
-                detections.append(bbox_queue.get_nowait())  # Non-blocking get
-        except Exception as e:
-            print(f"Error getting from queue: {e}")
-
-        if not detections:
-            print("Queue empty. Performing random exploration...")
-            random_exploration()
-            continue
-
         # Process the detections
         target = select_target_box(detections, frame_center)
         box = target['box']
-        center_x = (box[0] + box[2]) / 2
+        center_x = (box.xmin() + box.xmax()) / 2
         error_x = center_x - frame_center
-        box_height = box[3] - box[1]
+        box_height = box.ymax() - box.ymin()
 
         if abs(error_x) > 10:
             turn_speed = min(max(abs(error_x) * 0.1, 10), 50)
@@ -76,8 +63,3 @@ def cautious_approach(bbox_queue):
         else:
             print("Object centered and at desired size. Stopping.")
         time.sleep(0.1)
-
-
-if __name__ == "__main__":
-    bbox_queue = multiprocessing.Queue()
-    cautious_approach(bbox_queue)

@@ -13,6 +13,8 @@ import hailo
 from hailo_common_funcs import get_numpy_from_buffer, disable_qos
 from hailo_rpi_common import get_default_parser, QUEUE, get_caps_from_pad, GStreamerApp, app_callback_class
 
+from locomotion.bounding_box_target_select import *
+
 # -----------------------------------------------------------------------------------------------
 # User defined class to be used in the callback function
 # -----------------------------------------------------------------------------------------------
@@ -39,7 +41,7 @@ def app_callback(pad, info, user_data):
     # Check if the buffer is valid
     if buffer is None:
         return Gst.PadProbeReturn.OK
-        
+
     # using the user_data to count the number of frames
     user_data.increment()
     string_to_print = f"Frame count: {user_data.get_count()}\n"
@@ -63,9 +65,17 @@ def app_callback(pad, info, user_data):
         label = detection.get_label()
         bbox = detection.get_bbox()
         confidence = detection.get_confidence()
-        if label == "person":
-            string_to_print += (f"Detection: {label} {confidence:.2f}\n")
-            detection_count += 1
+        if label == "person" and confidence >= 0.5:
+            x1_norm = bbox.xmin()
+            y1_norm = bbox.ymin()
+            x2_norm = bbox.xmax()
+            y2_norm = bbox.ymax()
+            x1 = int(x1_norm * width)
+            y1 = int(y1_norm * height)
+            x2 = int(x2_norm * width)
+            y2 = int(y2_norm * height)
+            person_detection = (x1, y1, x2 - x1, y2 - y1)
+            print(person_detection)
     if user_data.use_frame:
         # Note: using imshow will not work here, as the callback function is not running in the main thread
     	# Lets ptint the detection count to the frame
