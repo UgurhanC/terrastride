@@ -25,7 +25,7 @@ from locomotion.bounding_box_target_select import *
 class user_app_callback_class(app_callback_class):
     def __init__(self):
         super().__init__()
-        self.last_time = 0
+        self.last_time = time.time()
         
 # Create an instance of the class
 user_data = user_app_callback_class()
@@ -64,24 +64,11 @@ def app_callback(pad, info, user_data):
     detection_count = 0
     detection_labels = [det.get_label() for det in detections]
 
-    if "cat" not in detection_labels:
+    if "person" not in detection_labels:
         user_data.last_time = random_exploration(user_data.last_time)
+    else:
+        user_data.last_time = cautious_approach(detections, user_data.last_time, width, height)
 
-    for detection in detections:
-        label = detection.get_label()
-        bbox = detection.get_bbox()
-        confidence = detection.get_confidence()
-        if label == "person" and confidence >= 0.5:
-            x1_norm = bbox.xmin()
-            y1_norm = bbox.ymin()
-            x2_norm = bbox.xmax()
-            y2_norm = bbox.ymax()
-            x1 = int(x1_norm * width)
-            y1 = int(y1_norm * height)
-            x2 = int(x2_norm * width)
-            y2 = int(y2_norm * height)
-            person_detection = (x1, y1, x2 - x1, y2 - y1)
-            print(person_detection)
     if user_data.use_frame:
         # Note: using imshow will not work here, as the callback function is not running in the main thread
     	# Lets ptint the detection count to the frame
@@ -93,7 +80,7 @@ def app_callback(pad, info, user_data):
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         user_data.set_frame(frame)
 
-    print(string_to_print)
+    # print(string_to_print)
     return Gst.PadProbeReturn.OK
     
 
