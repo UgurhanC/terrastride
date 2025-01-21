@@ -1,7 +1,10 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import gi
 gi.require_version('Gst', '1.0')
 from gi.repository import Gst, GLib
-import os
 import argparse
 import multiprocessing
 import numpy as np
@@ -22,9 +25,11 @@ from locomotion.bounding_box_target_select import *
 class user_app_callback_class(app_callback_class):
     def __init__(self):
         super().__init__()
+        self.last_time = 0
         
 # Create an instance of the class
 user_data = user_app_callback_class()
+user_data.last_time = time.time()
 
 # -----------------------------------------------------------------------------------------------
 # User defined callback function
@@ -54,9 +59,14 @@ def app_callback(pad, info, user_data):
     # get the detections from the buffer
     roi = hailo.get_roi_from_buffer(buffer)
     detections = roi.get_objects_typed(hailo.HAILO_DETECTION)
-    
+
     # parse the detections
     detection_count = 0
+    detection_labels = [det.get_label() for det in detections]
+
+    if "cat" not in detection_labels:
+        user_data.last_time = random_exploration(user_data.last_time)
+
     for detection in detections:
         label = detection.get_label()
         bbox = detection.get_bbox()
