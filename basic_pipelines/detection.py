@@ -29,7 +29,6 @@ class user_app_callback_class(app_callback_class):
         
 # Create an instance of the class
 user_data = user_app_callback_class()
-user_data.last_time = time.time()
 
 # -----------------------------------------------------------------------------------------------
 # User defined callback function

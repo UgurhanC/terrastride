@@ -1,16 +1,16 @@
 #!/bin/bash
 
-# Define the path to your project directory
+# Path to project directory
 PROJECT_DIR="/home/terrastride/terrastride"
 
-# Change to the correct directory
+# Change into directory
 cd "$PROJECT_DIR" || { echo "Failed to cd into $PROJECT_DIR"; exit 1; }
 
 # Source the environment setup script
 echo "Setting up environment..."
 source ./setup_env.sh || { echo "Failed to source ./setup_env.sh"; exit 1; }
 
-# Run the Python script for detection
+# Start robot
 echo "Running detection..."
 python3 basic_pipelines/detection.py || { echo "Failed to run detection.py"; exit 1; }
 

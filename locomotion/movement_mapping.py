@@ -2,7 +2,7 @@ import math
 import matplotlib.pyplot as plt
 
 # Robot parameters
-WHEEL_RADIUS = 0.035  # 3.5 cm
+WHEEL_RADIUS = 0.035  # 3.5 cm 69.8
 WHEELBASE_WIDTH = 0.15  # 15 cm distance between left and right wheels
 MAX_SPEED = 0.5  # Maximum speed in meters per second at 100% duty cycle
 

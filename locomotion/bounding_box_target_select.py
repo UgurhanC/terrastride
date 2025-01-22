@@ -23,10 +23,10 @@ def random_exploration(last_time):
         if random.random() > 0.5:  # Turn robot randomly
             if random.random() > 0.5:
                 print(f"turning right randomly at {right_speed}%")
-            # right_speed = -right_speed  # Turn right randomly
+                right_speed = -right_speed  # Turn right randomly
             else:
                 print(f"turning left randomly at {left_speed}%")
-             # left_speed = -left_speed  # Turn left randomly
+                left_speed = -left_speed  # Turn left randomly
         last_time = current_time
     return last_time
     
