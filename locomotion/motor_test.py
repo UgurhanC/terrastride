@@ -2,17 +2,21 @@ import RPi.GPIO as GPIO
 import time
 
 # GPIO Pins (same as your current setup)
-LEFT_MOTOR1_IN1 = 22
-LEFT_MOTOR1_IN2 = 23
-LEFT_MOTOR2_IN1 = 9
-LEFT_MOTOR2_IN2 = 25
-LEFT_PWM = 24
+# Occupied pins by cam: 2, 4, 6, 14, 3, 5
+# GPIO Pins (same as your current setup)
+LEFT_MOTOR1_IN1 = 22  # Left Motor 1 Forward
+LEFT_MOTOR1_IN2 = 23  # Left Motor 1 Backward
+LEFT_MOTOR2_IN1 = 9  # Left Motor 2 Forward
+LEFT_MOTOR2_IN2 = 25  # Left Motor 2 Backward
+LEFT_PWM = 24         # PWM speed control for left motors
 
-RIGHT_MOTOR1_IN3 = 17
-RIGHT_MOTOR1_IN4 = 27
-RIGHT_MOTOR2_IN3 = 11
-RIGHT_MOTOR2_IN4 = 8
-RIGHT_PWM = 10
+RIGHT_MOTOR1_IN3 = 17  # Right Motor 1 Forward
+RIGHT_MOTOR1_IN4 = 27 # Right Motor 1 Backward
+RIGHT_MOTOR2_IN3 = 7 # Right Motor 2 Forward
+RIGHT_MOTOR2_IN4 = 11  # Right Motor 2 Backward
+RIGHT_PWM = 10        # PWM speed control for right motors
+
+
 
 # GPIO Setup
 GPIO.setmode(GPIO.BCM)

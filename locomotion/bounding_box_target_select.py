@@ -1,10 +1,13 @@
 import time
 import random
 import multiprocessing
+import locomotion.bounding_box_motor_control
 
 safe_distance = 1.5  # Distance to maintain from objects (meters)
-target_size = 600  # Desired bounding box height in pixels
-size_tolerance = 10  # Acceptable deviation from the target size in pixels
+target_size = 100  # Desired bounding box height in pixels
+size_tolerance = 100  # Acceptable deviation from the target size in pixels
+
+divide_speed = 1.5
 
 # Combined score weights
 SIZE_WEIGHT = 0.7
@@ -12,12 +15,17 @@ CONFIDENCE_WEIGHT = 0.3
 
 def random_exploration(last_time):
     """Randomly move the robot to explore the area."""
+    last_time=10
+    print(last_time)
     current_time = time.time()
     if last_time == None:
         last_time = current_time
 
-    left_speed = random.randint(20, 40)  # Random speed between 20% and 40%
-    right_speed = random.randint(20, 40)  # Random speed between 20% and 40%
+    #left_speed = random.randint(20, 40)  # Random speed between 20% and 40%
+    #right_speed = random.randint(20, 40)  # Random speed between 20% and 40%
+
+    left_speed = 20
+    right_speed = 20
 
     if current_time - last_time > 2:
         if random.random() > 0.5:  # Turn robot randomly
@@ -30,8 +38,8 @@ def random_exploration(last_time):
         last_time = current_time
     return last_time
     
-    # movement_mapping_test.move_robot(left_speed, right_speed)
-    # movement_mapping_test.stop_robot()
+    locomotion.bounding_box_motor_control.move_robot(left_speed/divide_speed, right_speed/divide_speed)
+    locomotion.bounding_box_motor_control.stop_robot()
 def get_coordinates(det, width, height):
     """
     Convert normalized coordinates to pixel coordinates.
@@ -53,7 +61,7 @@ def calculate_combined_score(det, width, height):
     """
     bbox = get_coordinates(det, width, height)
     confidence = det.get_confidence()
-    size_score = bbox[3] - bbox[0]  # Bounding box height (proxy for proximity)
+    size_score = bbox[3] - bbox[1]  # Bounding box height (proxy for proximity)
     combined_score = SIZE_WEIGHT * size_score + CONFIDENCE_WEIGHT * confidence  # Weighted combination
     return combined_score
 
@@ -65,25 +73,44 @@ def select_target_box(detections, width, height):
 
 def cautious_approach(detections, last_time, width, height):
     """Align and adjust movement based on bounding boxes."""
+    last_time=10
+    print(last_time)
 
     current_time = time.time()
     if last_time == None:
         last_time = current_time
     frame_center = width / 2
+    
 
-    if current_time - last_time > 0.1:
+    if current_time - last_time > 2:
         # Process the detections
         target = select_target_box(detections, width, height)
         bbox = get_coordinates(target, width, height)
-        center_x = (bbox[0] + bbox[2]) / 2
+        center_x = (bbox[0] + bbox[2])
         error_x = center_x - frame_center
         box_height = bbox[3] - bbox[1]
+        print(frame_center)
+        print(center_x)
 
-        if abs(error_x) > 10:
+        if abs(error_x) > 300:
             turn_speed = min(max(abs(error_x) * 0.1, 10), 50)
-            print("Turning", "right" if error_x > 0 else "left", f"speed={turn_speed}")
+            if abs(error_x) > 0:
+                print("Turning", "right" if error_x > 0 else "left", f"speed={turn_speed}")
+                #locomotion.bounding_box_motor_control.move_robot(-turn_speed/divide_speed, turn_speed/divide_speed)
+                locomotion.bounding_box_motor_control.move_robot(-15, 15)
+            else:
+                print("Turning", "left" if error_x > 0 else "left", f"speed={turn_speed}")
+                #locomotion.bounding_box_motor_control.move_robot(turn_speed/divide_speed, -turn_speed/divide_speed)
+                locomotion.bounding_box_motor_control.move_robot(15, -15)
+        
         elif abs(box_height - target_size) > size_tolerance:
-            print("Adjusting distance", "closer" if box_height < target_size else "further")
+            if box_height < target_size:
+                print("Adjusting distance", "closer" if box_height < target_size else "further")
+                locomotion.bounding_box_motor_control.move_robot(-10, -10)
+            else:
+                print("Adjusting distance", "closer" if box_height < target_size else "further")
+                locomotion.bounding_box_motor_control.move_robot(10, 10)
         else:
             print("Object centered and at desired size. Stopping.")
+            locomotion.bounding_box_motor_control.stop_robot()
         last_time = current_time
