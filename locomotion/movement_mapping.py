@@ -1,5 +1,6 @@
 import math
 import matplotlib.pyplot as plt
+import time
 
 # Robot parameters
 WHEEL_RADIUS = 0.035  # 3.5 cm 69.8

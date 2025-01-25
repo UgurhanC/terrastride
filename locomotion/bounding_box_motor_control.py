@@ -1,3 +1,4 @@
+
 import RPi.GPIO as GPIO
 import time
 
@@ -8,18 +9,19 @@ WHEELBASE_WIDTH = 0.15  # 15 cm distance between left and right wheels
 # GPIO Pins
 # Left side motors
 # Occupied pins by cam: 2, 4, 6, 14, 3, 5
-LEFT_MOTOR1_IN1 = 22 #23 
-LEFT_MOTOR1_IN2 = 27 #24
-LEFT_MOTOR2_IN1 = 23 #23 #22
-LEFT_MOTOR2_IN2 = 17 #22 #27
-LEFT_PWM = 24 #25  # PWM for left motors
+# GPIO Pins (same as your current setup)
+LEFT_MOTOR1_IN1 = 22  # Left Motor 1 Forward
+LEFT_MOTOR1_IN2 = 23  # Left Motor 1 Backward
+LEFT_MOTOR2_IN1 = 9  # Left Motor 2 Forward
+LEFT_MOTOR2_IN2 = 25  # Left Motor 2 Backward
+LEFT_PWM = 24         # PWM speed control for left motors
 
-# Right side motors
-RIGHT_MOTOR1_IN3 = 9 #25
-RIGHT_MOTOR1_IN4 = 25 #8
-RIGHT_MOTOR2_IN3 = 11 #11 #14
-RIGHT_MOTOR2_IN4 = 8 #8 #4
-RIGHT_PWM = 10 #17  # PWM for right motors
+RIGHT_MOTOR1_IN3 = 17  # Right Motor 1 Forward
+RIGHT_MOTOR1_IN4 = 27 # Right Motor 1 Backward
+RIGHT_MOTOR2_IN3 = 7 # Right Motor 2 Forward
+RIGHT_MOTOR2_IN4 = 11  # Right Motor 2 Backward
+RIGHT_PWM = 10        # PWM speed control for right motors
+
 
 # GPIO Setup
 GPIO.setmode(GPIO.BCM)
