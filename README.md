@@ -50,7 +50,7 @@ Ensure the following tools and libraries are installed:
 2. **Set up the hardware**:
 
    - Attach the camera module, motors, and AI accelerator.
-   - Follow the assembly instructions in the [hardware guide](docs/hardware_guide.md).
+   - Follow the assembly instructions in the [hardware guide](3dmodel/build%20instructions.pdf).
 
 3. **Run the system**:
 
