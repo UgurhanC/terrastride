@@ -18,6 +18,8 @@ from hailo_rpi_common import get_default_parser, QUEUE, get_caps_from_pad, GStre
 
 from locomotion.bounding_box_target_select import *
 
+from ImageEnhancement.ApplyImageEnhancement import apply_image_enhancement
+
 # -----------------------------------------------------------------------------------------------
 # User defined class to be used in the callback function
 # -----------------------------------------------------------------------------------------------
@@ -36,6 +38,19 @@ user_data = user_app_callback_class()
 
 # This is the callback function that will be called when data is available from the pipeline
 def app_callback(pad, info, user_data):
+    
+    # Parameters for preprocessing
+    params = {"Saturation": 0.05079967757819648,
+            "CLAHE_clipLimit_Value": 2.525144052221287,
+            "CLAHE_clipLimit_BGR": 3.6481905337323903,
+            "Retinex_gain": 1.1856138179236042,
+            "Retinex_sigma1": 12.602866099185661,
+            "Retinex_sigma2": 78.29144514892346,
+            "Retinex_sigma3": 169.00897570787157,
+            "Blend_ratio": 0.07407034069082408,
+            "gamma": 1.3266392904177562,
+            "brightness_boost": 22.896780890614952}
+    
     # Get the GstBuffer from the probe info
     buffer = info.get_buffer()
     # Check if the buffer is valid
@@ -54,6 +69,9 @@ def app_callback(pad, info, user_data):
     if user_data.use_frame and format is not None and width is not None and height is not None:
         # get video frame
         frame = get_numpy_from_buffer(buffer, format, width, height)
+
+        # Process the frame        
+        frame = apply_image_enhancement(frame, params)
 
     # get the detections from the buffer
     roi = hailo.get_roi_from_buffer(buffer)
