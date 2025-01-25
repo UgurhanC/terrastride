@@ -12,7 +12,7 @@ TerraStride is an autonomous robotic vehicle designed to overcome limitations in
 
 - **🦉 Non-invasive Monitoring**: Tracks and follows animals with minimal disturbance.
 - **🤖 Advanced Computer Vision**: Utilizes YOLO and Hailo 8L accelerators for real-time object detection.
-- **🌌 Low-Light Performance**: Employs moth-eye-inspired lenses and biomimetic image enhancement.
+- **🌌 Low-Light Performance**: Employs biomimetic image enhancement inspired by nocturnal organisms.
 - **🐾 Biomimetic Design**: Features cat-paw-inspired wheels and tortoise-shell camouflage for stealth.
 - **📸 Dynamic Data Capture**: Stores high-quality images and videos, optimizing storage through confidence thresholds and motion triggers.
 
