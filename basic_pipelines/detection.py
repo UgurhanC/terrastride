@@ -89,48 +89,38 @@ user_data = user_app_callback_class()
 
 # This is the callback function that will be called when data is available from the pipeline
 def app_callback(pad, info, user_data):
-    
-    # Parameters for preprocessing
+    # Parameters for preprocessing (optional)
     params = {"Saturation": 0.05079967757819648,
-            "CLAHE_clipLimit_Value": 2.525144052221287,
-            "CLAHE_clipLimit_BGR": 3.6481905337323903,
-            "Retinex_gain": 1.1856138179236042,
-            "Retinex_sigma1": 12.602866099185661,
-            "Retinex_sigma2": 78.29144514892346,
-            "Retinex_sigma3": 169.00897570787157,
-            "Blend_ratio": 0.07407034069082408,
-            "gamma": 1.3266392904177562,
-            "brightness_boost": 22.896780890614952}
-    
+              "CLAHE_clipLimit_Value": 2.525144052221287,
+              "CLAHE_clipLimit_BGR": 3.6481905337323903,
+              "Retinex_gain": 1.1856138179236042,
+              "Retinex_sigma1": 12.602866099185661,
+              "Retinex_sigma2": 78.29144514892346,
+              "Retinex_sigma3": 169.00897570787157,
+              "Blend_ratio": 0.07407034069082408,
+              "gamma": 1.3266392904177562,
+              "brightness_boost": 22.896780890614952}
+
     # Get the GstBuffer from the probe info
     buffer = info.get_buffer()
-    # Check if the buffer is valid
     if buffer is None:
         return Gst.PadProbeReturn.OK
 
-    # using the user_data to count the number of frames
-    user_data.increment()
-    string_to_print = f"Frame count: {user_data.get_count()}\n"
-    
     # Get the caps from the pad
     format, width, height = get_caps_from_pad(pad)
 
-    # If the user_data.use_frame is set to True, we can get the video frame from the buffer
-    #user_data.use_frame = True
-    frame = None
-    if user_data.use_frame and format is not None and width is not None and height is not None:
-        # get video frame
-        frame = get_numpy_from_buffer(buffer, format, width, height)
+    # Get the video frame from the buffer
+    frame = get_numpy_from_buffer(buffer, format, width, height)
+    frame = apply_image_enhancement(frame, params)
 
-        # Process the frame        
-        #frame = apply_image_enhancement(frame, params)
-        #print("Image Enhancement Applied!")
-
-    
-    # get the detections from the buffer
+    # Get the detections from the buffer
     roi = hailo.get_roi_from_buffer(buffer)
     detections = roi.get_objects_typed(hailo.HAILO_DETECTION)
 
+    # Parse the detections and extract labels
+    detection_labels = [det.get_label() for det in detections]
+
+    # Check if the target subjects are detected and have high enough confidence
     target_detected = False
     for detection in detections:
         label = detection.get_label()
@@ -142,7 +132,7 @@ def app_callback(pad, info, user_data):
             break
 
     if target_detected:
-        # If a valid target subject is detected, start recording
+        # If a valid target subject is detected, start recording (if not already recording)
         if not user_data.is_recording:
             # Generate a new filename for the recording
             new_filename = f"detection_video_{time.strftime('%Y%m%d_%H%M%S')}.mp4"
@@ -155,22 +145,29 @@ def app_callback(pad, info, user_data):
 
         # Handle cautious approach or other logic for detected subjects
         user_data.last_time = cautious_approach(detections, user_data.last_time, width, height)
-        user_data.start_recording(width, height)
 
-    # if user_data.use_frame:
-    #     # Note: using imshow will not work here, as the callback function is not running in the main thread
-    # 	# Lets ptint the detection count to the frame
-    #     cv2.putText(frame, f"Detections: {detection_count}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-    #     # Example of how to use the new_variable and new_function from the user_data
-    #     # Let's print the new_variable and the result of the new_function to the frame
-    #     cv2.putText(frame, f"{user_data.new_function()} {user_data.new_variable}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-    #     # Convert the frame to BGR
-    #     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-    #     #frame = apply_image_enhancement(frame, params=params)
-    #     #print("applied image enhancement")
-    #     user_data.set_frame(frame)
+    else:
+        # If no target is detected, check if enough time has passed since the last valid detection
+        if user_data.is_recording:
+            # Check if we have passed the threshold time to stop recording after the last detection
+            elapsed_time_since_detection = time.time() - user_data.detection_start_time
+            if elapsed_time_since_detection > user_data.post_detection_duration:
+                user_data.stop_recording()
 
-    # print(string_to_print)
+        # If no target is detected, handle random exploration
+        user_data.last_time = random_exploration(user_data.last_time)
+
+    # Draw the detection count on the frame
+    cv2.putText(frame, f"Detections: {len(detections)}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+    # Convert the frame to BGR and save it if recording
+    frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+    if user_data.is_recording and user_data.video_writer is not None:
+        user_data.video_writer.write(frame_bgr)
+
+    # Return the frame to user_data
+    user_data.set_frame(frame_bgr)
+
     return Gst.PadProbeReturn.OK
     
 
