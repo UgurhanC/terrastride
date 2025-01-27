@@ -18,8 +18,6 @@ def random_exploration(last_time):
     last_time=10
     print(last_time)
     current_time = time.time()
-    if last_time == None:
-        last_time = current_time
 
     #left_speed = random.randint(20, 40)  # Random speed between 20% and 40%
     #right_speed = random.randint(20, 40)  # Random speed between 20% and 40%

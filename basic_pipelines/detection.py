@@ -28,10 +28,14 @@ class user_app_callback_class(app_callback_class):
     def __init__(self):
         super().__init__()
         self.last_time = time.time()
-        self.is_recording = False
-        self.video_writer = None
-        self.output_filename = f'terrastride_'
-    
+        self.is_recording = False  # Flag to track recording state
+        self.video_writer = None  # cv2.VideoWriter instance
+        self.output_filename = 'terry_output.mp4'  # Default filename
+        self.target_subjects = ['person', 'cat']  # List of target species
+        self.confidence_threshold = 0.6  # Set confidence threshold for recording
+        self.detection_start_time = None  # Track when the detection starts
+        self.post_detection_duration = 5  # Continue recording for 5 seconds after detection
+
     def start_recording(self, width, height):
         # Initialize the video writer when recording starts
         if self.video_writer is None:
@@ -39,7 +43,6 @@ class user_app_callback_class(app_callback_class):
             self.video_writer = cv2.VideoWriter(self.output_filename, fourcc, 30.0, (width, height))
             self.is_recording = True
             print(f"Started recording to {self.output_filename}")
-
 
     def stop_recording(self):
         # Release the video writer and stop recording
@@ -49,6 +52,32 @@ class user_app_callback_class(app_callback_class):
             self.is_recording = False
             print("Stopped recording")
 
+    def update_filename(self, new_filename):
+        # Update the video filename dynamically
+        self.output_filename = new_filename
+        print(f"Updated video filename to {self.output_filename}")
+
+    def check_detection(self, detections):
+        # Check if any detection matches the target subject and confidence threshold
+        for detection in detections:
+            label = detection.get_label()
+            confidence = detection.get_confidence()
+            
+            if label in self.target_subjects and confidence >= self.confidence_threshold:
+                return True  # Target detected with high confidence
+        return False
+
+    def handle_post_detection(self, detections, current_time):
+        # Continue recording if the target is still present or if enough time has passed
+        if self.detection_start_time is not None:
+            elapsed_time = current_time - self.detection_start_time
+            if elapsed_time < self.post_detection_duration:
+                # Still within the time window, continue recording
+                return True
+            else:
+                # Stop recording after post-detection time
+                self.stop_recording()
+        return False
 
 
 # Create an instance of the class
@@ -99,26 +128,40 @@ def app_callback(pad, info, user_data):
     roi = hailo.get_roi_from_buffer(buffer)
     detections = roi.get_objects_typed(hailo.HAILO_DETECTION)
 
-    # parse the detections
-    detection_count = 0
-    detection_labels = [det.get_label() for det in detections]
+    target_detected = False
+    for detection in detections:
+        label = detection.get_label()
+        confidence = detection.get_confidence()
 
-    if "person" not in detection_labels:
-        user_data.last_time = random_exploration(user_data.last_time)
-    else:
+        # Check if the label matches the target subjects and the confidence is above threshold
+        if label in user_data.target_subjects and confidence >= user_data.confidence_threshold:
+            target_detected = True
+            break
+
+    if target_detected:
+        # If a valid target subject is detected, start recording
+        if not user_data.is_recording:
+            # Generate a new filename for the recording
+            new_filename = f"detection_video_{time.strftime('%Y%m%d_%H%M%S')}.mp4"
+            user_data.update_filename(new_filename)
+            user_data.start_recording(width, height)
+
+        # Optionally, you can update the detection start time if required for the recording
+        if user_data.is_recording and user_data.detection_start_time is None:
+            user_data.detection_start_time = time.time()
+
+        # Handle cautious approach or other logic for detected subjects
         user_data.last_time = cautious_approach(detections, user_data.last_time, width, height)
-        user_data.start_recording(width, height)
 
-    if user_data.use_frame:
-        # Note: using imshow will not work here, as the callback function is not running in the main thread
-    	# Lets ptint the detection count to the frame
-        cv2.putText(frame, f"Detections: {detection_count}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        # Example of how to use the new_variable and new_function from the user_data
-        # Let's print the new_variable and the result of the new_function to the frame
-        cv2.putText(frame, f"{user_data.new_function()} {user_data.new_variable}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        # Convert the frame to BGR
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        user_data.set_frame(frame)
+    else:
+        # Handle cases where target subjects are not detected
+        if user_data.is_recording:
+            # Stop recording if subject leaves frame after a certain duration
+            if time.time() - user_data.detection_start_time > user_data.post_detection_duration:
+                user_data.stop_recording()
+
+        # Handle random exploration if no target subject detected
+        user_data.last_time = random_exploration(user_data.last_time)
 
     # print(string_to_print)
     return Gst.PadProbeReturn.OK
