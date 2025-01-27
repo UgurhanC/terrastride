@@ -55,7 +55,7 @@ class user_app_callback_class(app_callback_class):
 
     def update_filename(self, new_filename):
         # Update the video filename dynamically
-        self.output_filename = new_filename
+        self.output_filename = os.path.join('/home/terrastride/terrastride_recordings/'+new_filename)
         print(f"Updated video filename to {self.output_filename}")
 
     def check_detection(self, detections):
