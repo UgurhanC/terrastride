@@ -15,8 +15,6 @@ CONFIDENCE_WEIGHT = 0.3
 
 def random_exploration(last_time):
     """Randomly move the robot to explore the area."""
-    last_time=10
-    print(last_time)
     current_time = time.time()
 
     #left_speed = random.randint(20, 40)  # Random speed between 20% and 40%
@@ -71,9 +69,11 @@ def select_target_box(detections, width, height):
 
 def cautious_approach(detections, last_time, width, height):
     """Align and adjust movement based on bounding boxes."""
-    last_time=10
-
+    if not detections:
+        return last_time
+    
     current_time = time.time()
+
     if last_time == None:
         last_time = current_time
     frame_center = width / 2
