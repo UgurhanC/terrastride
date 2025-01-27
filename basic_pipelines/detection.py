@@ -28,7 +28,59 @@ class user_app_callback_class(app_callback_class):
     def __init__(self):
         super().__init__()
         self.last_time = time.time()
-        
+        self.is_recording = False  # Flag to track recording state
+        self.video_writer = None  # cv2.VideoWriter instance
+        self.output_filename = 'terry_output.mp4'  # Default filename
+        self.target_subjects = ['person', 'cat']  # List of target species
+        self.confidence_threshold = 0.6  # Set confidence threshold for recording
+        self.detection_start_time = None  # Track when the detection starts
+        self.post_detection_duration = 5  # Continue recording for 5 seconds after detection
+        self.target_detected = False
+
+    def start_recording(self, width, height):
+        # Initialize the video writer when recording starts
+        if self.video_writer is None:
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec for MP4 format
+            self.video_writer = cv2.VideoWriter(self.output_filename, fourcc, 30.0, (width, height))
+            self.is_recording = True
+            print(f"Started recording to {self.output_filename}")
+
+    def stop_recording(self):
+        # Release the video writer and stop recording
+        if self.video_writer is not None:
+            self.video_writer.release()
+            self.video_writer = None
+            self.is_recording = False
+            print("Stopped recording")
+
+    def update_filename(self, new_filename):
+        # Update the video filename dynamically
+        self.output_filename = new_filename
+        print(f"Updated video filename to {self.output_filename}")
+
+    def check_detection(self, detections):
+        # Check if any detection matches the target subject and confidence threshold
+        for detection in detections:
+            label = detection.get_label()
+            confidence = detection.get_confidence()
+            
+            if label in self.target_subjects and confidence >= self.confidence_threshold:
+                return True  # Target detected with high confidence
+        return False
+
+    def handle_post_detection(self, detections, current_time):
+        # Continue recording if the target is still present or if enough time has passed
+        if self.detection_start_time is not None:
+            elapsed_time = current_time - self.detection_start_time
+            if elapsed_time < self.post_detection_duration:
+                # Still within the time window, continue recording
+                return True
+            else:
+                # Stop recording after post-detection time
+                self.stop_recording()
+        return False
+
+
 # Create an instance of the class
 user_data = user_app_callback_class()
 
@@ -38,66 +90,82 @@ user_data = user_app_callback_class()
 
 # This is the callback function that will be called when data is available from the pipeline
 def app_callback(pad, info, user_data):
-    
-    # Parameters for preprocessing
+    # Parameters for preprocessing (optional)
     params = {"Saturation": 0.05079967757819648,
-            "CLAHE_clipLimit_Value": 2.525144052221287,
-            "CLAHE_clipLimit_BGR": 3.6481905337323903,
-            "Retinex_gain": 1.1856138179236042,
-            "Retinex_sigma1": 12.602866099185661,
-            "Retinex_sigma2": 78.29144514892346,
-            "Retinex_sigma3": 169.00897570787157,
-            "Blend_ratio": 0.07407034069082408,
-            "gamma": 1.3266392904177562,
-            "brightness_boost": 22.896780890614952}
-    
+              "CLAHE_clipLimit_Value": 2.525144052221287,
+              "CLAHE_clipLimit_BGR": 3.6481905337323903,
+              "Retinex_gain": 1.1856138179236042,
+              "Retinex_sigma1": 12.602866099185661,
+              "Retinex_sigma2": 78.29144514892346,
+              "Retinex_sigma3": 169.00897570787157,
+              "Blend_ratio": 0.07407034069082408,
+              "gamma": 1.3266392904177562,
+              "brightness_boost": 22.896780890614952}
+
     # Get the GstBuffer from the probe info
     buffer = info.get_buffer()
-    # Check if the buffer is valid
     if buffer is None:
         return Gst.PadProbeReturn.OK
 
-    # using the user_data to count the number of frames
-    user_data.increment()
-    string_to_print = f"Frame count: {user_data.get_count()}\n"
-    
     # Get the caps from the pad
     format, width, height = get_caps_from_pad(pad)
 
-    # If the user_data.use_frame is set to True, we can get the video frame from the buffer
-    frame = None
-    if user_data.use_frame and format is not None and width is not None and height is not None:
-        # get video frame
-        frame = get_numpy_from_buffer(buffer, format, width, height)
+    # Get the video frame from the buffer
+    frame = get_numpy_from_buffer(buffer, format, width, height)
 
-        # Process the frame        
-        frame = apply_image_enhancement(frame, params)
-
-    # get the detections from the buffer
+    # Get the detections from the buffer
     roi = hailo.get_roi_from_buffer(buffer)
     detections = roi.get_objects_typed(hailo.HAILO_DETECTION)
 
-    # parse the detections
-    detection_count = 0
-    detection_labels = [det.get_label() for det in detections]
+    # Check if the target subjects are detected and have high enough confidence
+    for detection in detections:
+        label = detection.get_label()
+        confidence = detection.get_confidence()
 
-    if "person" not in detection_labels:
-        user_data.last_time = random_exploration(user_data.last_time)
-    else:
+        # Check if the label matches the target subjects and the confidence is above threshold
+        if label in user_data.target_subjects and confidence >= user_data.confidence_threshold:
+            user_data.target_detected = True
+            break
+
+    if user_data.target_detected and detections:
+        # If a valid target subject is detected, start recording (if not already recording)
+        if not user_data.is_recording:
+            # Generate a new filename for the recording
+            new_filename = f"terrastride_{time.strftime('%Y%m%d_%H%M%S')}.mp4"
+            user_data.update_filename(new_filename)
+            user_data.start_recording(width, height)
+
+        # Save start time
+        if user_data.is_recording:
+            user_data.detection_start_time = time.time()
+
+        # Handle cautious approach
         user_data.last_time = cautious_approach(detections, user_data.last_time, width, height)
 
-    if user_data.use_frame:
-        # Note: using imshow will not work here, as the callback function is not running in the main thread
-    	# Lets ptint the detection count to the frame
-        cv2.putText(frame, f"Detections: {detection_count}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        # Example of how to use the new_variable and new_function from the user_data
-        # Let's print the new_variable and the result of the new_function to the frame
-        cv2.putText(frame, f"{user_data.new_function()} {user_data.new_variable}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        # Convert the frame to BGR
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        user_data.set_frame(frame)
+    elif not detections:
+        # If no target is detected, handle random exploration
+        user_data.last_time = random_exploration(user_data.last_time)
 
-    # print(string_to_print)
+        user_data.target_detected = False
+        # If no target is detected, check if enough time has passed since the last valid detection
+        if user_data.is_recording:
+            # Check if we have passed the threshold time to stop recording after the last detection
+            elapsed_time_since_detection = time.time() - user_data.detection_start_time
+            if elapsed_time_since_detection > user_data.post_detection_duration:
+                user_data.stop_recording()
+
+
+    # Draw the detection count on the frame
+    cv2.putText(frame, f"Detections: {len(detections)}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+    # Convert the frame to BGR and save it if recording
+    frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+    if user_data.is_recording and user_data.video_writer is not None:
+        user_data.video_writer.write(frame_bgr)
+
+    # Return the frame to user_data
+    user_data.set_frame(frame_bgr)
+
     return Gst.PadProbeReturn.OK
     
 
