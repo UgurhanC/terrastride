@@ -8,8 +8,8 @@ from ImageEnhancement.ImageProcesses import *
 #Function to apply the enhancement algorithm with given hyperparameters
 def apply_image_enhancement(image, params):
 
-    print("Amogus")
-    print(image.shape)
+    #print("Amogus")
+    #print(image.shape)
     #print(params.items())
     ### Step 1: Dual-Channel Light Amplification in HSV
     hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
