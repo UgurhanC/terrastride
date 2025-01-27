@@ -160,6 +160,10 @@ def app_callback(pad, info, user_data):
 
     # Convert the frame to BGR and save it if recording
     frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+    print(frame_bgr.shape)
+    frame_bgr = apply_image_enhancement(frame_bgr, params=params)
+    print(frame_bgr.shape)
+    print("Image enhancement applied")
     if user_data.is_recording and user_data.video_writer is not None:
         user_data.video_writer.write(frame_bgr)
 
