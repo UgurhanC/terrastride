@@ -32,7 +32,7 @@ class user_app_callback_class(app_callback_class):
         self.video_writer = None  # cv2.VideoWriter instance
         self.output_filename = 'terry_output.mp4'  # Default filename
         self.target_subjects = ['person', 'cat']  # List of target species
-        self.confidence_threshold = 0.6  # Set confidence threshold for recording
+        self.confidence_threshold = 0.35  # Set confidence threshold for recording
         self.detection_start_time = None  # Track when the detection starts
         self.post_detection_duration = 5  # Continue recording for 5 seconds after detection
         self.target_detected = False

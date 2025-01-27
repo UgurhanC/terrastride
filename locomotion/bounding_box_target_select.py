@@ -112,19 +112,19 @@ def cautious_approach(detections, last_time, width, height):
         center_x = (bbox[0] + bbox[2])
         error_x = center_x - frame_center
         box_height = bbox[3] - bbox[1]
-        print(frame_center)
-        print(center_x)
+        print("Frame center = {frame_center}")
+        print("Center bbox = {center_x}")
 
         if abs(error_x) > 300:
             turn_speed = min(max(abs(error_x) * 0.1, 20), 35)
             if abs(error_x) > 0:
                 print("Turning", "right" if error_x > 0 else "left", f"speed={turn_speed}")
-                #locomotion.bounding_box_motor_control.move_robot(-turn_speed/divide_speed, turn_speed/divide_speed)
-                locomotion.bounding_box_motor_control.move_robot(-15, 15)
+                locomotion.bounding_box_motor_control.move_robot(-turn_speed/divide_speed, turn_speed/divide_speed)
+                #locomotion.bounding_box_motor_control.move_robot(-15, 15)
             else:
                 print("Turning", "left" if error_x > 0 else "left", f"speed={turn_speed}")
-                #locomotion.bounding_box_motor_control.move_robot(turn_speed/divide_speed, -turn_speed/divide_speed)
-                locomotion.bounding_box_motor_control.move_robot(15, -15)
+                locomotion.bounding_box_motor_control.move_robot(turn_speed/divide_speed, -turn_speed/divide_speed)
+                #locomotion.bounding_box_motor_control.move_robot(15, -15)
         
         elif abs(box_height - target_size) > size_tolerance:
             if box_height < target_size:
