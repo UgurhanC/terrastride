@@ -74,7 +74,6 @@ def select_target_box(detections, width, height):
 def cautious_approach(detections, last_time, width, height):
     """Align and adjust movement based on bounding boxes."""
     last_time=10
-    print(last_time)
 
     current_time = time.time()
     if last_time == None:
@@ -114,3 +113,4 @@ def cautious_approach(detections, last_time, width, height):
             print("Object centered and at desired size. Stopping.")
             locomotion.bounding_box_motor_control.stop_robot()
         last_time = current_time
+    return last_time

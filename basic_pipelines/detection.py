@@ -28,7 +28,29 @@ class user_app_callback_class(app_callback_class):
     def __init__(self):
         super().__init__()
         self.last_time = time.time()
-        
+        self.is_recording = False
+        self.video_writer = None
+        self.output_filename = f'terrastride_'
+    
+    def start_recording(self, width, height):
+        # Initialize the video writer when recording starts
+        if self.video_writer is None:
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec for MP4 format
+            self.video_writer = cv2.VideoWriter(self.output_filename, fourcc, 30.0, (width, height))
+            self.is_recording = True
+            print(f"Started recording to {self.output_filename}")
+
+
+    def stop_recording(self):
+        # Release the video writer and stop recording
+        if self.video_writer is not None:
+            self.video_writer.release()
+            self.video_writer = None
+            self.is_recording = False
+            print("Stopped recording")
+
+
+
 # Create an instance of the class
 user_data = user_app_callback_class()
 
@@ -85,6 +107,7 @@ def app_callback(pad, info, user_data):
         user_data.last_time = random_exploration(user_data.last_time)
     else:
         user_data.last_time = cautious_approach(detections, user_data.last_time, width, height)
+        user_data.start_recording(width, height)
 
     if user_data.use_frame:
         # Note: using imshow will not work here, as the callback function is not running in the main thread
