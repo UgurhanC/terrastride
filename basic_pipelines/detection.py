@@ -116,14 +116,17 @@ def app_callback(pad, info, user_data):
     format, width, height = get_caps_from_pad(pad)
 
     # If the user_data.use_frame is set to True, we can get the video frame from the buffer
+    #user_data.use_frame = True
     frame = None
     if user_data.use_frame and format is not None and width is not None and height is not None:
         # get video frame
         frame = get_numpy_from_buffer(buffer, format, width, height)
 
         # Process the frame        
-        frame = apply_image_enhancement(frame, params)
+        #frame = apply_image_enhancement(frame, params)
+        #print("Image Enhancement Applied!")
 
+    
     # get the detections from the buffer
     roi = hailo.get_roi_from_buffer(buffer)
     detections = roi.get_objects_typed(hailo.HAILO_DETECTION)
@@ -152,16 +155,20 @@ def app_callback(pad, info, user_data):
 
         # Handle cautious approach or other logic for detected subjects
         user_data.last_time = cautious_approach(detections, user_data.last_time, width, height)
+        user_data.start_recording(width, height)
 
-    else:
-        # Handle cases where target subjects are not detected
-        if user_data.is_recording:
-            # Stop recording if subject leaves frame after a certain duration
-            if time.time() - user_data.detection_start_time > user_data.post_detection_duration:
-                user_data.stop_recording()
-
-        # Handle random exploration if no target subject detected
-        user_data.last_time = random_exploration(user_data.last_time)
+    # if user_data.use_frame:
+    #     # Note: using imshow will not work here, as the callback function is not running in the main thread
+    # 	# Lets ptint the detection count to the frame
+    #     cv2.putText(frame, f"Detections: {detection_count}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    #     # Example of how to use the new_variable and new_function from the user_data
+    #     # Let's print the new_variable and the result of the new_function to the frame
+    #     cv2.putText(frame, f"{user_data.new_function()} {user_data.new_variable}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    #     # Convert the frame to BGR
+    #     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+    #     #frame = apply_image_enhancement(frame, params=params)
+    #     #print("applied image enhancement")
+    #     user_data.set_frame(frame)
 
     # print(string_to_print)
     return Gst.PadProbeReturn.OK
