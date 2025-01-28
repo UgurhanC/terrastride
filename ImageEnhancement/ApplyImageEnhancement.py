@@ -6,7 +6,11 @@ import cv2
 import numpy as np
 from ImageEnhancement.ImageProcesses import *
 #Function to apply the enhancement algorithm with given hyperparameters
-def apply_image_enhancement(image, params):
+def apply_image_enhancement(image, params, vclahe, bgrclahe):
+
+    #enhanced_image = image
+    #vclahe = cv2.createCLAHE(clipLimit = params["CLAHE_clipLimit_Value"], tileGridSize=(8, 8)) #Adjusted clipLimit
+    #bgrclahe = cv2.createCLAHE(clipLimit = params["CLAHE_clipLimit_BGR"], tileGridSize=(8, 8))
 
     #print("Amogus")
     #print(image.shape)
@@ -18,8 +22,7 @@ def apply_image_enhancement(image, params):
 
     #Apply CLAHE to the VAlue channel with controlled limits
     #print(params["CLAHE_clipLimit_Value"])
-    clahe = cv2.createCLAHE(clipLimit = params["CLAHE_clipLimit_Value"], tileGridSize=(8, 8)) #Adjusted clipLimit
-    v_clahe = clahe.apply(v)
+    v_clahe = vclahe.apply(v)
 
     # Merge back the channels and convert to BGR
     hsv_amplified = cv2.merge([h, s, v_clahe])
@@ -30,10 +33,9 @@ def apply_image_enhancement(image, params):
     b, g, r = cv2.split(amplified_image)
 
     # Apply CLAHE to each channel with a controlled clip limit
-    clahe = cv2.createCLAHE(clipLimit = params["CLAHE_clipLimit_BGR"], tileGridSize=(8, 8))
-    b_clahe = clahe.apply(b)
-    g_clahe = clahe.apply(g)
-    r_clahe = clahe.apply(r)
+    b_clahe = bgrclahe.apply(b)
+    g_clahe = bgrclahe.apply(g)
+    r_clahe = bgrclahe.apply(r)
 
     # Merge enhanced channels back
     contrast_enhanced_image = cv2.merge([b_clahe, g_clahe, r_clahe])
@@ -70,5 +72,5 @@ def apply_image_enhancement(image, params):
     #Increase brightness by adding a fixed value
     brightness_boost = params["brightness_boost"] #Adjust from between 20-40
     enhanced_image = cv2.convertScaleAbs(final_image, alpha=1, beta=brightness_boost)
-
+    
     return enhanced_image

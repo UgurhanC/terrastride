@@ -55,8 +55,8 @@ def move_robot(left_speed, right_speed):
         # Forward direction for left motors
         GPIO.output(LEFT_MOTOR1_IN1, GPIO.HIGH)
         GPIO.output(LEFT_MOTOR1_IN2, GPIO.LOW)
-        GPIO.output(LEFT_MOTOR2_IN1, GPIO.LOW)
-        GPIO.output(LEFT_MOTOR2_IN2, GPIO.HIGH)
+        GPIO.output(LEFT_MOTOR2_IN1, GPIO.HIGH)
+        GPIO.output(LEFT_MOTOR2_IN2, GPIO.LOW)
     else:
         # Backward direction for left motors
         GPIO.output(LEFT_MOTOR1_IN1, GPIO.LOW)
@@ -87,7 +87,7 @@ def stop_robot():
     """
     Stop the robot by setting all GPIO outputs to low.
     """
-    print("robot stopping")
+    #print("robot stopping")
     GPIO.output(LEFT_MOTOR1_IN1, GPIO.LOW)
     GPIO.output(LEFT_MOTOR1_IN2, GPIO.LOW)
     GPIO.output(LEFT_MOTOR2_IN1, GPIO.LOW)
