@@ -20,6 +20,98 @@ from locomotion.bounding_box_target_select import *
 
 from ImageEnhancement.ApplyImageEnhancement import apply_image_enhancement
 
+from ImageEnhancement.ImageProcesses import *
+import time
+
+#Function to apply the enhancement algorithm with given hyperparameters
+def apply_image_enhancement(image, params, vclahe, bgrclahe):
+
+    times = []
+    #enhanced_image = image
+    #vclahe = cv2.createCLAHE(clipLimit = params["CLAHE_clipLimit_Value"], tileGridSize=(8, 8)) #Adjusted clipLimit
+    #bgrclahe = cv2.createCLAHE(clipLimit = params["CLAHE_clipLimit_BGR"], tileGridSize=(8, 8))
+
+    #print("Amogus")
+    #print(image.shape)
+    #print(params.items())
+    ### Step 1: Dual-Channel Light Amplification in HSV
+    
+    times.append(time.time())
+    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(hsv_image)
+    s = (s*params["Saturation"]).astype(np.uint8)
+
+    #Apply CLAHE to the VAlue channel with controlled limits
+    #print(params["CLAHE_clipLimit_Value"])
+    times.append(time.time())
+    v_clahe = vclahe.apply(v)
+
+    # Merge back the channels and convert to BGR
+    times.append(time.time())
+    hsv_amplified = cv2.merge([h, s, v_clahe])
+    amplified_image = cv2.cvtColor(hsv_amplified, cv2.COLOR_HSV2BGR)
+
+    ### Step 2: Color Contrast Enhancement with CLAHE on Each Channel
+    #Split the amplified image into BGR channels
+    b, g, r = cv2.split(amplified_image)
+
+    # Apply CLAHE to each channel with a controlled clip limit
+    times.append(time.time())
+    b_clahe = bgrclahe.apply(b)
+    g_clahe = bgrclahe.apply(g)
+    r_clahe = bgrclahe.apply(r)
+
+    # Merge enhanced channels back
+    times.append(time.time())
+    contrast_enhanced_image = cv2.merge([b_clahe, g_clahe, r_clahe])
+
+    ### Step 3: Multi-Scale Retinex for Signal Integration
+    #Make sure the retinex functions are defined
+    # Apply multi-scale retinex on each channel separately
+    times.append(time.time())
+    """retinex_b = multi_scale_retinex(b_clahe, sigmas = [params["Retinex_sigma1"], params["Retinex_sigma2"], params["Retinex_sigma3"]], gain = params["Retinex_gain"])
+    retinex_g = multi_scale_retinex(g_clahe, sigmas = [params["Retinex_sigma1"], params["Retinex_sigma2"], params["Retinex_sigma3"]], gain = params["Retinex_gain"])
+    retinex_r = multi_scale_retinex(r_clahe, sigmas = [params["Retinex_sigma1"], params["Retinex_sigma2"], params["Retinex_sigma3"]], gain = params["Retinex_gain"])
+
+    #Stack channels back together and clip values to the valid range
+    times.append(time.time())
+    retinex_image = cv2.merge([retinex_b, retinex_g, retinex_r])
+    retinex_image = np.clip(retinex_image, 0, 255).astype(np.uint8)
+    """
+    retinex_image = contrast_enhanced_image
+
+    ### Step 4: Noise Reduction with Edge Preservation
+    # Apply bilateral filter for noise reduction with edge preservation
+    times.append(time.time())
+    denoised_image = cv2.bilateralFilter(retinex_image, d=9, sigmaColor=10, sigmaSpace=10) #Potentially three more hyperparameters
+
+    ### Step 5: Blend the Amplified and Original Image for a Natural Look
+    times.append(time.time())
+    alpha = params["Blend_ratio"] # Blend ratio; adjust for stronger or weaker enhancement
+    final_image = cv2.addWeighted(denoised_image, alpha, image, 1-alpha, 0)
+
+    final_image = cv2.bilateralFilter(final_image, d=5, sigmaColor=10, sigmaSpace=10)
+    times.append(time.time())
+
+    def adjust_gamma(image, gamma=1.2):
+        invGamma = 1.0 / gamma
+        table = np.array([(i / 255.0) ** invGamma * 255 for i in np.arange(0,256)]).astype("uint8")
+        return cv2.LUT(image, table)
+
+    #Apply gamma correction to final image
+    times.append(time.time())
+    final_image = adjust_gamma(final_image, gamma = params["gamma"])
+    
+    times.append(time.time())
+    #Increase brightness by adding a fixed value
+    brightness_boost = params["brightness_boost"] #Adjust from between 20-40
+    enhanced_image = cv2.convertScaleAbs(final_image, alpha=1, beta=brightness_boost)
+    
+    times.append(time.time())
+    #print(times)
+
+    return enhanced_image
+
 # -----------------------------------------------------------------------------------------------
 # User defined class to be used in the callback function
 # -----------------------------------------------------------------------------------------------
@@ -36,6 +128,7 @@ class user_app_callback_class(app_callback_class):
         self.detection_start_time = None  # Track when the detection starts
         self.post_detection_duration = 5  # Continue recording for 5 seconds after detection
         self.target_detected = False
+        self.frame_skip = 3
 
     def start_recording(self, width, height):
         # Initialize the video writer when recording starts
@@ -91,16 +184,6 @@ user_data = user_app_callback_class()
 # This is the callback function that will be called when data is available from the pipeline
 def app_callback(pad, info, user_data):
     # Parameters for preprocessing (optional)
-    params = {"Saturation": 0.05079967757819648,
-              "CLAHE_clipLimit_Value": 2.525144052221287,
-              "CLAHE_clipLimit_BGR": 3.6481905337323903,
-              "Retinex_gain": 1.1856138179236042,
-              "Retinex_sigma1": 12.602866099185661,
-              "Retinex_sigma2": 78.29144514892346,
-              "Retinex_sigma3": 169.00897570787157,
-              "Blend_ratio": 0.07407034069082408,
-              "gamma": 1.3266392904177562,
-              "brightness_boost": 22.896780890614952}
 
     # Get the GstBuffer from the probe info
     buffer = info.get_buffer()
@@ -112,6 +195,7 @@ def app_callback(pad, info, user_data):
 
     # Get the video frame from the buffer
     frame = get_numpy_from_buffer(buffer, format, width, height)
+    #frame = apply_image_enhancement(frame, params=params, vclahe=vclahe, bgrclahe=bgrclahe)
 
     # Get the detections from the buffer
     roi = hailo.get_roi_from_buffer(buffer)
@@ -161,7 +245,6 @@ def app_callback(pad, info, user_data):
     # Convert the frame to BGR and save it if recording
     frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
     #print(frame_bgr.shape)
-    frame_bgr = apply_image_enhancement(frame_bgr, params=params)
     #print(frame_bgr.shape)
     #print("Image enhancement applied")
     if user_data.is_recording and user_data.video_writer is not None:
@@ -215,11 +298,11 @@ class GStreamerDetectionApp(GStreamerApp):
             source_element += f"video/x-raw, format={self.network_format}, width=1536, height=864 ! "
             source_element += QUEUE("queue_src_scale")
             source_element += f"videoscale ! "
-            source_element += f"video/x-raw, format={self.network_format}, width={self.network_width}, height={self.network_height}, framerate=30/1 ! "
+            source_element += f"video/x-raw, format={self.network_format}, width={self.network_width}, height={self.network_height}, framerate=10/1 ! "
         
         elif (self.source_type == "usb"):
             source_element = f"v4l2src device={self.video_source} name=src_0 ! "
-            source_element += f"video/x-raw, width=640, height=480, framerate=30/1 ! "
+            source_element += f"video/x-raw, width=640, height=480, framerate=10/1 ! "
         else:  
             source_element = f"filesrc location={self.video_source} name=src_0 ! "
             source_element += QUEUE("queue_dec264")
@@ -255,6 +338,22 @@ class GStreamerDetectionApp(GStreamerApp):
         return pipeline_string
 
 if __name__ == "__main__":
+    #Parameters for image enhancement
+    params = {"Saturation": 0.05079967757819648,
+              "CLAHE_clipLimit_Value": 2.525144052221287,
+              "CLAHE_clipLimit_BGR": 3.6481905337323903,
+              "Retinex_gain": 1.1856138179236042,
+              "Retinex_sigma1": 12.602866099185661,
+              "Retinex_sigma2": 78.29144514892346,
+              "Retinex_sigma3": 169.00897570787157,
+              "Blend_ratio": 0.07407034069082408,
+              "gamma": 1.3266392904177562,
+              "brightness_boost": 22.896780890614952}
+    
+    #Classes predefined for image enhancement
+    vclahe = cv2.createCLAHE(clipLimit = params["CLAHE_clipLimit_Value"], tileGridSize=(8, 8)) #Adjusted clipLimit
+    bgrclahe = cv2.createCLAHE(clipLimit = params["CLAHE_clipLimit_BGR"], tileGridSize=(8, 8))
+
     parser = get_default_parser()
     # Add additional arguments here
     parser.add_argument("--network", default="yolov11s", choices=['yolov11s'], help="Which Network to use, default is yolov11s")
