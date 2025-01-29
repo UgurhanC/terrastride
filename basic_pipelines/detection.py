@@ -161,7 +161,7 @@ class user_app_callback_class(app_callback_class):
                 return True  # Target detected with high confidence
         return False
 
-    def handle_post_detection(self, detections, current_time):
+    def handle_post_detection(self, current_time):
         # Continue recording if the target is still present or if enough time has passed
         if self.detection_start_time is not None:
             elapsed_time = current_time - self.detection_start_time
@@ -200,16 +200,9 @@ def app_callback(pad, info, user_data):
     # Get the detections from the buffer
     roi = hailo.get_roi_from_buffer(buffer)
     detections = roi.get_objects_typed(hailo.HAILO_DETECTION)
-
-    # Check if the target subjects are detected and have high enough confidence
-    for detection in detections:
-        label = detection.get_label()
-        confidence = detection.get_confidence()
-
-        # Check if the label matches the target subjects and the confidence is above threshold
-        if label in user_data.target_subjects and confidence >= user_data.confidence_threshold:
-            user_data.target_detected = True
-            break
+    
+    # Check if target subjects are detected and have high enough confidence score
+    user_data.target_detected = user_data.check_detections(detections)
 
     if user_data.target_detected and detections:
         # If a valid target subject is detected, start recording (if not already recording)
@@ -234,9 +227,7 @@ def app_callback(pad, info, user_data):
         # If no target is detected, check if enough time has passed since the last valid detection
         if user_data.is_recording:
             # Check if we have passed the threshold time to stop recording after the last detection
-            elapsed_time_since_detection = time.time() - user_data.detection_start_time
-            if elapsed_time_since_detection > user_data.post_detection_duration:
-                user_data.stop_recording()
+            user_data.is_recording = user_data.handle_post_detection(time.time())
 
 
     # Draw the detection count on the frame

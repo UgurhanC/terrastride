@@ -125,7 +125,7 @@ def cautious_approach(detections, last_time, width, height):
                 locomotion.bounding_box_motor_control.move_robot(-15, 15)
                 #time.sleep(0.1)
             else:
-                print("Approach - Turning", "left" if error_x > 0 else "left", f"speed={turn_speed}")
+                print("Approach - Turning", "left" if error_x > 0 else "right", f"speed={turn_speed}")
                 #locomotion.bounding_box_motor_control.move_robot(turn_speed/divide_speed, -turn_speed/divide_speed)
                 locomotion.bounding_box_motor_control.move_robot(15, -15)
                 #time.sleep(0.1)
