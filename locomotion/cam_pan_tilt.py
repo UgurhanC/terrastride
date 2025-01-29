@@ -1,30 +1,43 @@
 import RPi.GPIO as GPIO
 import time
 
-# GPIO setup
-GPIO.setmode(GPIO.BCM)
-PAN_PIN = 17  # GPIO pin for pan servo
-TILT_PIN = 18  # GPIO pin for tilt servo
+# Set up GPIO
+GPIO.setmode(GPIO.BCM)  # Use BCM pin numbering
+servo_pin = 3  # GPIO pin 2
 
-GPIO.setup(PAN_PIN, GPIO.OUT)
-GPIO.setup(TILT_PIN, GPIO.OUT)
+GPIO.setup(servo_pin, GPIO.OUT)
 
-pan_servo = GPIO.PWM(PAN_PIN, 50)  # 50Hz PWM
-tilt_servo = GPIO.PWM(TILT_PIN, 50)
+# Set up PWM on the servo pin
+pwm = GPIO.PWM(servo_pin, 50)  # 50Hz is standard for most servos
 
-pan_servo.start(7.5)  # Neutral position
-tilt_servo.start(7.5)
+# Start PWM with 0% duty cycle (initially stopped)
+pwm.start(0)
 
-def set_angle(servo, angle):
-    duty = 2 + (angle / 18)  # Convert angle to duty cycle
-    servo.ChangeDutyCycle(duty)
-    time.sleep(0.5)  # Allow time to move
-    servo.ChangeDutyCycle(0)  # Stop signal to prevent jitter
+# Function to set servo position
+def set_angle(angle):
+    # Convert angle to duty cycle (approximation for most servos)
+    duty = angle / 18 + 2
+    pwm.ChangeDutyCycle(duty)
 
-# Example usage
-set_angle(pan_servo, 90)  # Pan to 90°
-set_angle(tilt_servo, 45)  # Tilt to 45°
+# Test the servo by moving it to different angles
+try:
+    print("Moving servo to 0°")
+    set_angle(0)  # Move to 0 degrees
+    time.sleep(2)
+    
+    print("Moving servo to 90°")
+    set_angle(90)  # Move to 90 degrees
+    time.sleep(2)
+    
+    print("Moving servo to 180°")
+    set_angle(180)  # Move to 180 degrees
+    time.sleep(2)
+    
+    # You can keep testing other angles as needed.
+    
+except KeyboardInterrupt:
+    print("Program interrupted by user.")
 
-pan_servo.stop()
-tilt_servo.stop()
+# Cleanup
+pwm.stop()
 GPIO.cleanup()

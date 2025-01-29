@@ -38,18 +38,18 @@ def random_exploration(last_time=None):
                 locomotion.bounding_box_motor_control.move_robot(20, -20)  # Turn right
             
             # Turn for a short duration
-            time.sleep(2)  # Turn for 1 second
+            #time.sleep(2)  # Turn for 1 second
             locomotion.bounding_box_motor_control.stop_robot()
         
         # Move forward for 1.5 seconds
         print("Explore - Moving forward after turn")
         locomotion.bounding_box_motor_control.move_robot(20, 20)  # Move forward
-        time.sleep(1.5)
+        #time.sleep(1.5)
         locomotion.bounding_box_motor_control.stop_robot()
 
         # Pause for 3 seconds to "scan" the area
         print("Pausing to scan the area")
-        time.sleep(3)
+        #time.sleep(3)
 
         # Update the last action time
         last_time = time.time()

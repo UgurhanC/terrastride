@@ -14,7 +14,7 @@ LEFT_MOTOR1_IN1 = 22  # Left Motor 1 Forward
 LEFT_MOTOR1_IN2 = 23  # Left Motor 1 Backward
 LEFT_MOTOR2_IN1 = 9  # Left Motor 2 Forward
 LEFT_MOTOR2_IN2 = 25  # Left Motor 2 Backward
-LEFT_PWM = 24         # PWM speed control for left motors
+LEFT_PWM = 18         # PWM speed control for left motors
 
 RIGHT_MOTOR1_IN3 = 17  # Right Motor 1 Forward
 RIGHT_MOTOR1_IN4 = 27 # Right Motor 1 Backward
@@ -102,8 +102,8 @@ def stop_robot():
 if __name__ == "__main__":
     try:
         print("Robot ready to receive movement commands.")
-        while True:
-            time.sleep(1)
+        # while True:
+        #     time.sleep(1)
     except KeyboardInterrupt:
         print("Stopping robot...")
         stop_robot()
