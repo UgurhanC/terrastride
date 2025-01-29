@@ -31,7 +31,6 @@ def apply_image_enhancement(image, params, vclahe, bgrclahe):
     #vclahe = cv2.createCLAHE(clipLimit = params["CLAHE_clipLimit_Value"], tileGridSize=(8, 8)) #Adjusted clipLimit
     #bgrclahe = cv2.createCLAHE(clipLimit = params["CLAHE_clipLimit_BGR"], tileGridSize=(8, 8))
 
-    #print("Amogus")
     #print(image.shape)
     #print(params.items())
     ### Step 1: Dual-Channel Light Amplification in HSV
@@ -124,11 +123,12 @@ class user_app_callback_class(app_callback_class):
         self.video_writer = None  # cv2.VideoWriter instance
         self.output_filename = 'terry_output.mp4'  # Default filename
         self.target_subjects = ['person', 'cat']  # List of target species
-        self.confidence_threshold = 0.35  # Set confidence threshold for recording
+        self.confidence_threshold = 0.30  # Set confidence threshold for recording
         self.detection_start_time = None  # Track when the detection starts
         self.post_detection_duration = 5  # Continue recording for 5 seconds after detection
         self.target_detected = False
         self.frame_skip = 3
+        self.detection_label = None
 
     def start_recording(self, width, height):
         # Initialize the video writer when recording starts
@@ -158,6 +158,7 @@ class user_app_callback_class(app_callback_class):
             confidence = detection.get_confidence()
             
             if label in self.target_subjects and confidence >= self.confidence_threshold:
+                self.detection_label = label
                 return True  # Target detected with high confidence
         return False
 
@@ -166,7 +167,12 @@ class user_app_callback_class(app_callback_class):
         if self.detection_start_time is not None:
             elapsed_time = current_time - self.detection_start_time
             if elapsed_time < self.post_detection_duration:
+                print(f"Post-detection time remaining: {self.post_detection_duration - elapsed_time}s")
                 # Still within the time window, continue recording
+                #if elapsed_time < 1:
+                #    correct_lateral(error)
+                #else:
+                #    random_exploration(user_data.last_time)
                 return True
             else:
                 # Stop recording after post-detection time
@@ -202,13 +208,13 @@ def app_callback(pad, info, user_data):
     detections = roi.get_objects_typed(hailo.HAILO_DETECTION)
     
     # Check if target subjects are detected and have high enough confidence score
-    user_data.target_detected = user_data.check_detections(detections)
+    user_data.target_detected = user_data.check_detection(detections)
 
     if user_data.target_detected and detections:
         # If a valid target subject is detected, start recording (if not already recording)
         if not user_data.is_recording:
             # Generate a new filename for the recording
-            new_filename = f"terrastride_{time.strftime('%Y%m%d_%H%M%S')}.mp4"
+            new_filename = f"terrastride_{user_data.detection_label}_{time.strftime('%Y%m%d_%H%M%S')}.mp4"
             user_data.update_filename(new_filename)
             user_data.start_recording(width, height)
 
@@ -220,7 +226,7 @@ def app_callback(pad, info, user_data):
         user_data.last_time = cautious_approach(detections, user_data.last_time, width, height)
 
     elif not detections:
-        # If no target is detected, handle random exploration
+        # If no target is detected and Terry is not turning in the last known direction, handle random exploration
         user_data.last_time = random_exploration(user_data.last_time)
 
         user_data.target_detected = False
@@ -228,10 +234,6 @@ def app_callback(pad, info, user_data):
         if user_data.is_recording:
             # Check if we have passed the threshold time to stop recording after the last detection
             user_data.is_recording = user_data.handle_post_detection(time.time())
-
-
-    # Draw the detection count on the frame
-    cv2.putText(frame, f"Detections: {len(detections)}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
     # Convert the frame to BGR and save it if recording
     frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)

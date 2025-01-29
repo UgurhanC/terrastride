@@ -36,20 +36,32 @@ def random_exploration(last_time=None):
             else:
                 print("Explore - Turning right - explore")
                 locomotion.bounding_box_motor_control.move_robot(20, -20)  # Turn right
+            # Move forward or backwards for 1 seconds
+            if random.random() > 0.85:
+                print("Explore - Moving backward after turn")
+                locomotion.bounding_box_motor_control.move_robot(-20, -20)  # Move backward
+            elif random.random() > 0.03:
+                print("Explore - Moving forward after turn")
+                locomotion.bounding_box_motor_control.move_robot(20, 20)  # Move forward
+
             
             # Turn for a short duration
-            #time.sleep(2)  # Turn for 1 second
-            locomotion.bounding_box_motor_control.stop_robot()
+            last_time = time.time()
+            if time.time() - last_time > 1.5:
+                locomotion.bounding_box_motor_control.stop_robot()
         
-        # Move forward for 1.5 seconds
-        print("Explore - Moving forward after turn")
-        locomotion.bounding_box_motor_control.move_robot(20, 20)  # Move forward
-        #time.sleep(1.5)
-        locomotion.bounding_box_motor_control.stop_robot()
+        last_time = time.time()
 
+        if time.time() - last_time > 1:
+            print("Pausing to scan the area")
+            locomotion.bounding_box_motor_control.stop_robot()
+
+        last_time = time.time()
         # Pause for 3 seconds to "scan" the area
-        print("Pausing to scan the area")
-        #time.sleep(3)
+  
+        if time.time() - last_time > 3:
+            last_time = time.time()
+            return time.time()
 
         # Update the last action time
         last_time = time.time()
@@ -57,7 +69,6 @@ def random_exploration(last_time=None):
         # locomotion.bounding_box_motor_control.move_robot(left_speed/divide_speed, right_speed/divide_speed)
         # time.sleep(5)
         # locomotion.bounding_box_motor_control.stop_robot()
-
     return last_time
 
 def get_coordinates(det, width, height):
@@ -91,13 +102,25 @@ def select_target_box(detections, width, height):
     """
     return max(detections, key=lambda det: calculate_combined_score(det, width, height))
 
+def correct_lateral(error):
+    # turn_speed = min(max(abs(error) * 0.1, 20), 35)
+    if not error:
+        return
+    # If error is negative, it means the object is on the left, turn right
+    if error < 0:
+        print("Approach - Turning right", f"speed={15}")
+        locomotion.bounding_box_motor_control.move_robot(-15, 15)  # Turn right to correct
+    
+    # If error is positive, it means the object is on the right, turn left
+    else:
+        print("Approach - Turning left", f"speed={15}")
+        locomotion.bounding_box_motor_control.move_robot(15, -15)  # Turn left to correct
 
 
 def cautious_approach(detections, last_time, width, height):
     """Align and adjust movement based on bounding boxes."""
-    if not detections:
-        return last_time
-    
+    current_time = time.time()
+ 
     current_time = time.time()
 
     if last_time == None:
@@ -105,7 +128,7 @@ def cautious_approach(detections, last_time, width, height):
     frame_center = width / 2
     
 
-    if current_time - last_time > 0.1:
+    if current_time - last_time > 1:
         # Process the detections
         target = select_target_box(detections, width, height)
         bbox = get_coordinates(target, width, height)
@@ -116,26 +139,14 @@ def cautious_approach(detections, last_time, width, height):
         # print("Frame center = {frame_center}")
         # print("Center bbox = {center_x}")
         print(f"Frame center: {frame_center}, Box center: {center_x}, Error: {error_x}")
-
         if abs(error_x) > 100:
-            turn_speed = min(max(abs(error_x) * 0.1, 20), 35)
-            if error_x > 0:
-                print("Approach - Turning", "right" if error_x > 0 else "left", f"speed={turn_speed}")
-                #locomotion.bounding_box_motor_control.move_robot(-turn_speed/divide_speed, turn_speed/divide_speed)
-                locomotion.bounding_box_motor_control.move_robot(-15, 15)
-                #time.sleep(0.1)
-            else:
-                print("Approach - Turning", "left" if error_x > 0 else "right", f"speed={turn_speed}")
-                #locomotion.bounding_box_motor_control.move_robot(turn_speed/divide_speed, -turn_speed/divide_speed)
-                locomotion.bounding_box_motor_control.move_robot(15, -15)
-                #time.sleep(0.1)
-        
+            correct_lateral(error_x)
         elif abs(box_height - target_size) > size_tolerance:
             if box_height < target_size:
-                print("Approach - Adjusting distance", "closer" if box_height < target_size else "further")
+                print("Approach - Adjusting distance further")
                 locomotion.bounding_box_motor_control.move_robot(-20, -20)
             else:
-                print("Approach - Adjusting distance", "closer" if box_height < target_size else "further")
+                print("Approach - Adjusting distance closer")
                 locomotion.bounding_box_motor_control.move_robot(20, 20)
         else:
             print("Approach - Object centered and at desired size. Stopping.")
