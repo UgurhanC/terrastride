@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Path to project directory
-PROJECT_DIR="/home/terrastride/terrastride"
+PROJECT_DIR="/home/terrastride/terrastride/terrastride"
 
 # Change into directory
 cd "$PROJECT_DIR" || { echo "Failed to cd into $PROJECT_DIR"; exit 1; }
