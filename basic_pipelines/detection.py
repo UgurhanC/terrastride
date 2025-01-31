@@ -17,6 +17,7 @@ from hailo_common_funcs import get_numpy_from_buffer, disable_qos
 from hailo_rpi_common import get_default_parser, QUEUE, get_caps_from_pad, GStreamerApp, app_callback_class
 
 from locomotion.bounding_box_target_select import *
+import locomotion.bounding_box_motor_control 
 
 from ImageEnhancement.ApplyImageEnhancement import apply_image_enhancement
 
@@ -31,6 +32,7 @@ def apply_image_enhancement(image, params, vclahe, bgrclahe):
     #vclahe = cv2.createCLAHE(clipLimit = params["CLAHE_clipLimit_Value"], tileGridSize=(8, 8)) #Adjusted clipLimit
     #bgrclahe = cv2.createCLAHE(clipLimit = params["CLAHE_clipLimit_BGR"], tileGridSize=(8, 8))
 
+    #print("Amogus")
     #print(image.shape)
     #print(params.items())
     ### Step 1: Dual-Channel Light Amplification in HSV
@@ -121,20 +123,19 @@ class user_app_callback_class(app_callback_class):
         self.last_time = time.time()
         self.is_recording = False  # Flag to track recording state
         self.video_writer = None  # cv2.VideoWriter instance
-        self.output_filename = 'terry_output.mp4'  # Default filename
+        self.output_filename = None  # Default filename
         self.target_subjects = ['person', 'cat']  # List of target species
-        self.confidence_threshold = 0.30  # Set confidence threshold for recording
+        self.confidence_threshold = 0.5  # Set confidence threshold for recording
         self.detection_start_time = None  # Track when the detection starts
-        self.post_detection_duration = 5  # Continue recording for 5 seconds after detection
+        self.post_detection_duration = 4  # Continue recording for 5 seconds after detection
         self.target_detected = False
-        self.frame_skip = 3
-        self.detection_label = None
+        self.target_label = None
 
     def start_recording(self, width, height):
         # Initialize the video writer when recording starts
         if self.video_writer is None:
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec for MP4 format
-            self.video_writer = cv2.VideoWriter(self.output_filename, fourcc, 30.0, (width, height))
+            self.video_writer = cv2.VideoWriter(self.output_filename, fourcc, 15, (width, height))
             self.is_recording = True
             print(f"Started recording to {self.output_filename}")
 
@@ -158,21 +159,15 @@ class user_app_callback_class(app_callback_class):
             confidence = detection.get_confidence()
             
             if label in self.target_subjects and confidence >= self.confidence_threshold:
-                self.detection_label = label
-                return True  # Target detected with high confidence
-        return False
+                return label, True  # Target detected with high confidence
+        return None, False
 
     def handle_post_detection(self, current_time):
         # Continue recording if the target is still present or if enough time has passed
         if self.detection_start_time is not None:
             elapsed_time = current_time - self.detection_start_time
             if elapsed_time < self.post_detection_duration:
-                print(f"Post-detection time remaining: {self.post_detection_duration - elapsed_time}s")
                 # Still within the time window, continue recording
-                #if elapsed_time < 1:
-                #    correct_lateral(error)
-                #else:
-                #    random_exploration(user_data.last_time)
                 return True
             else:
                 # Stop recording after post-detection time
@@ -206,15 +201,19 @@ def app_callback(pad, info, user_data):
     # Get the detections from the buffer
     roi = hailo.get_roi_from_buffer(buffer)
     detections = roi.get_objects_typed(hailo.HAILO_DETECTION)
-    
-    # Check if target subjects are detected and have high enough confidence score
-    user_data.target_detected = user_data.check_detection(detections)
+
+    # Check if the target subjects are detected and have high enough confidence
+    label, user_data.target_detected = user_data.check_detection(detections)
+    if label:
+        user_data.target_label = label
 
     if user_data.target_detected and detections:
+        locomotion.bounding_box_motor_control.stop_robot()
+        
         # If a valid target subject is detected, start recording (if not already recording)
         if not user_data.is_recording:
             # Generate a new filename for the recording
-            new_filename = f"terrastride_{user_data.detection_label}_{time.strftime('%Y%m%d_%H%M%S')}.mp4"
+            new_filename = f"terrastride_{user_data.target_label}_{time.strftime('%Y%m%d_%H%M%S')}.mp4"
             user_data.update_filename(new_filename)
             user_data.start_recording(width, height)
 
@@ -225,15 +224,19 @@ def app_callback(pad, info, user_data):
         # Handle cautious approach
         user_data.last_time = cautious_approach(detections, user_data.last_time, width, height)
 
-    elif not detections:
-        # If no target is detected and Terry is not turning in the last known direction, handle random exploration
-        user_data.last_time = random_exploration(user_data.last_time)
-
+    else:
         user_data.target_detected = False
+
         # If no target is detected, check if enough time has passed since the last valid detection
         if user_data.is_recording:
             # Check if we have passed the threshold time to stop recording after the last detection
             user_data.is_recording = user_data.handle_post_detection(time.time())
+        else:
+            user_data.last_time = random_exploration(user_data.last_time)
+
+
+    # Draw the detection count on the frame
+    cv2.putText(frame, f"Detecting: {user_data.target_label}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
     # Convert the frame to BGR and save it if recording
     frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
@@ -280,7 +283,7 @@ class GStreamerDetectionApp(GStreamerApp):
         self.thresholds_str = f"nms-score-threshold={nms_score_threshold} nms-iou-threshold={nms_iou_threshold} output-format-type=HAILO_FORMAT_TYPE_FLOAT32"
 
         # Set the process title
-        setproctitle.setproctitle("Hailo Detection App")
+        setproctitle.setproctitle("TerraStride Tracking App")
 
         self.create_pipeline()
 
