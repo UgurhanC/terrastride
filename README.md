@@ -51,6 +51,9 @@ Ensure the following tools and libraries are installed:
 
    - Attach the camera module, motors, and AI accelerator.
    - Follow the assembly instructions in the [hardware guide](3dmodel/build%20instructions.pdf).
+   - As for logging into the Raspberry Pi, use the following credentials:
+   - Username: terrastride
+   - Password: raspberry
 
 3. **Run the system**:
 
